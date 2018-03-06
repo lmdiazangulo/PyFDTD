@@ -2,20 +2,26 @@ import numpy as np
 import math
 import scipy.constants
 import time
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
 # ==== Preamble ===============================================================
 c0   = scipy.constants.speed_of_light
 eps0 = scipy.constants.epsilon_0
 mu0  = scipy.constants.mu_0
 
-def analyticalGaussian(coordinates, time, spread):
-    return
+def gaussianFunction(x, x0, spread):
+    gaussian = np.zeros(x.size)
+    for i in range(x.size):
+        gaussian[i] = math.exp( - math.pow(x[i] - x0, 2) /
+                                  (2 * math.pow(spread, 2)) )
+    return gaussian
 
 # ==== Inputs / Pre-processing ================================================ 
 # ---- Problem definition -----------------------------------------------------
 L         = 10.0
-dx        = 0.05
-finalTime = L/c0/4
+dx        = 0.1
+finalTime = L/c0*2
 cfl       = 1.0
 
 grid = np.linspace(0, L, num=L/dx, endpoint=True)
@@ -27,10 +33,10 @@ grid = np.linspace(0, L, num=L/dx, endpoint=True)
 # ---- Sources ----------------------------------------------------------------
 # Initial field
 spread = 0.5
-initialE = analyticalGaussian(grid, 0.0, spread)
+initialE = gaussianFunction(grid, L/2, spread)
 
 # Plane wave illumination
-totalFieldBox = ( math.floor(grid.size * 1/4), math.floor(grid.size * 3/4) )
+totalFieldBox = (L*1/4, L*3/4)
 delay  = 8e-9
 spread = 2e-9
  
@@ -39,39 +45,36 @@ samplingPeriod = 0.0
  
 # ==== Processing =============================================================
 # ---- Solver initialization --------------------------------------------------
-dt = cfl*dx/c0
-numberOfTimeSteps = finalTime / dt
+dt = cfl * dx / c0
+numberOfTimeSteps = int( finalTime / dt )
 
 if samplingPeriod == 0.0:
     samplingPeriod = dt 
-nSamples = finalTime/samplingPeriod
+nSamples  = int( math.floor(finalTime/samplingPeriod) )
 probeE    = np.zeros((grid.size, nSamples))
 probeTime = np.zeros(nSamples) 
 
-eOld = np.linspace(0, L, num=grid.size, endpoint=True)
+eOld = np.zeros(grid.size)
 eNew = eOld
-hOld = np.linspace(0, L, num=grid.size, endpoint=False)
+hOld = np.zeros(grid.size-1)
 hNew = hOld
 if 'initialE' in locals():
     eOld = initialE
 if 'initialH' in locals():
     hOld = initialH
 
-totalFieldBoxIndex = 
-    ( np.searchSorted(grid, totalFieldBox()[0]),
-      np.searchSorted(grid, totalFieldBox()[1]) );
+# totalFieldLeft = np.searchSorted(grid, totalFieldBox()[0])
 
 # Determines recursion coefficients
 cE = dt / eps0 / dx
 cH = dt / mu0  / dx
 
 # ---- Time integration -------------------------------------------------------
-print('--- Starts processing ---')
+print('--- Processing starts---')
 tic = time.time();
 
 t = 0.0
 for n in range(numberOfTimeSteps):
-    t += dt
     # --- Updates E field ---
     for i in range(2, grid.size-1):
         eNew[i] = eOld[i] + cE * (hOld[i-1] - hOld[i])
@@ -98,7 +101,7 @@ for n in range(numberOfTimeSteps):
 #     ez(cells,2) = ez(cells-1,1) + (c0*dt-dx)/(c0*dt+dx)*(ez(cells,2) - ez(cells-1,1)); 
 
     # --- Updates H field ---
-    for i in range(grid.size):
+    for i in range(grid.size-1):
         hNew[i] = hOld[i] + cH * (eNew[i] - eNew[i+1])
     
     # E field boundary conditions
@@ -106,20 +109,43 @@ for n in range(numberOfTimeSteps):
 #     hy(excPoint,2) = hy(excPoint,2) +  exp(- 0.5*((t+dt/2-delay)/spread)^2)/eta0;
 #     hy(scaPoint,2) = hy(scaPoint,2) - exp(- 0.5*((t+dt/2-delay-phaseShift)/spread)^2)/eta0;
    
-    # Switches 
+    # --- Updates output requests ---
+    probeE[:,n]  = eNew
+    probeTime[n] = t
+    
+    # --- Updates fields and time 
     eOld = eNew
     hOld = hNew
-   
-    # --- Updates output requests ---
-    probeE
+    t += dt
 
 tictoc = time.time() - tic;
-print('--- Final time reached ---')
-print('CPU Time: %f', tictoc)
+print('--- Processing finished ---')
+print("CPU Time: %f [s]" % tictoc)
 
 # ==== Post-processing ========================================================
 
-# Eanalytical = analyticalGaussian(x,t+dt/2,L,spread);
-# 
-# fprintf('For dx=%e , L^2 error: %e\n', ...
-#     dx, sum(abs(ez(:,2)-Eanalytical))/cells);
+# --- Creates animation ---
+fig = plt.figure(figsize=(8,4))
+ax = plt.axes(xlim=(grid[0], grid[-1]), ylim=(-1.1, 1.1))
+ax.grid(color='gray', linestyle='--', linewidth=.2)
+ax.set_xlabel('X coordinate [m]')
+ax.set_ylabel('Electric field [V/m]')
+line,    = ax.plot([], [], 'o', markersize=1)
+timeText = ax.text(0.02, 0.95, '', transform=ax.transAxes)
+
+def init():
+    line.set_data([], [])
+    timeText.set_text('')
+    return line, timeText
+
+def animate(i):
+    line.set_data(grid, probeE[:,i])
+    timeText.set_text('Time = %2.1f [ns]' % (probeTime[i]*1e9))
+    return line, timeText
+
+anim = animation.FuncAnimation(fig, animate, init_func=init,
+                               frames=nSamples, interval=50, blit=True)
+
+plt.show()
+
+print('=== Program finished ===')

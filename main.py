@@ -81,33 +81,25 @@ for n in range(numberOfTimeSteps):
      
     # E field boundary conditions
     # Sources
-#     if totalFieldBox in locals():
-#         phaseShift = delay + grid[totalFieldBoxIndex()[0]] / c0s;
-#         eNew[ totalFieldBoxIndex()[0] ] = 
-#             eNew[ totalFieldBoxIndex()[0] ] + exp(- 0.5*((t-phaseShift)/spread)^2);    
-#         ez(scaPoint,2) = 
-#             ez(scaPoint,2) - exp(- 0.5*((t-delay-phaseShift)/spread)^2);
-    
+    # TODO
+
     # PEC
     eNew[ 0] = 0.0;
     eNew[-1] = 0.0;
     
     # PMC
-#     ez(    1, 2)    = ez(    1,1) - 2*cE*hy(      1,1);
-#     ez(cells,2)=ez(cells,1) + 2*cE*hy(cells-1,1);
+    # TODO
     
     # Mur ABC
-#     ez(1,2) = ez(2,1) + (c0*dt-dx)/(c0*dt+dx)*(ez(2,2) - ez(1,1));
-#     ez(cells,2) = ez(cells-1,1) + (c0*dt-dx)/(c0*dt+dx)*(ez(cells,2) - ez(cells-1,1)); 
+    # TODO
 
     # --- Updates H field ---
     for i in range(grid.size-1):
         hNew[i] = hOld[i] + cH * (eNew[i] - eNew[i+1])
     
-    # E field boundary conditions
+    # H field boundary conditions
     # Sources
-#     hy(excPoint,2) = hy(excPoint,2) +  exp(- 0.5*((t+dt/2-delay)/spread)^2)/eta0;
-#     hy(scaPoint,2) = hy(scaPoint,2) - exp(- 0.5*((t+dt/2-delay-phaseShift)/spread)^2)/eta0;
+    # TODO
    
     # --- Updates output requests ---
     probeE[:,n]  = eNew

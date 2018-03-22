@@ -25,7 +25,7 @@ def gaussianFunction(x, x0, spread):
 L         = 10.0
 dx        = 0.05
 finalTime = L/c0*2
-cfl       = 1.0
+cfl       = .8
 
 gridE = np.linspace(0,      L,        num=L/dx+1, endpoint=True)
 gridH = np.linspace(dx/2.0, L-dx/2.0, num=L/dx,   endpoint=True)
@@ -95,12 +95,12 @@ for n in range(numberOfTimeSteps):
 #     eNew[-1] = 0.0;
     
     # PMC
-#     eNew[ 0] = eOld[ 0] - 2.0 * cE * hOld[ 0];
-#     eNew[-1] = eOld[-1] + 2.0 * cE * hOld[-1];
+#     eNew[ 0] = eOld[ 0] - 2.0 * cE * hOld[ 0]
+#     eNew[-1] = eOld[-1] + 2.0 * cE * hOld[-1]
     
     # Mur ABC
     eNew[ 0] = eOld[ 1] + (c0*dt-dx)/(c0*dt+dx) * (eNew[ 1] - eOld[ 0])         
-    eNew[-1] = eOld[-2] + (c0*dt-dx)/(c0*dt+dx) * (eNew[-1] - eOld[-2]) 
+    eNew[-1] = eOld[-2] + (c0*dt-dx)/(c0*dt+dx) * (eNew[-2] - eOld[-1]) 
 
     # --- Updates H field ---
     for i in range(gridH.size):

@@ -6,26 +6,20 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
 # ==== Preamble ===============================================================
-# c0   = scipy.constants.speed_of_light
-# eps0 = scipy.constants.epsilon_0
-# mu0  = scipy.constants.mu_0
-c0 = 3e8
-mu0 = math.pi*4e-7;
-eps0=1/(mu0*c0**2);
+c0   = scipy.constants.speed_of_light
+mu0  = scipy.constants.mu_0
+eps0 = scipy.constants.epsilon_0
+imp0 = math.sqrt(mu0 / eps0)
 
-def gaussianFunction(x, x0, spread):
-    gaussian = np.zeros(x.size)
-    for i in range(x.size):
-        gaussian[i] = math.exp( - math.pow(x[i] - x0, 2) /
-                                  (2.0 * math.pow(spread, 2)) )
-    return gaussian
+def gaussianFunction(t, t0, spread):
+    return math.exp(- math.pow(t-t0, 2) / (2.0 * math.pow(spread, 2)) )
 
 # ==== Inputs / Pre-processing ================================================ 
 # ---- Problem definition -----------------------------------------------------
 L         = 10.0
 dx        = 0.05
 finalTime = L/c0*2
-cfl       = .8
+cfl       = .99
 
 gridE = np.linspace(0,      L,        num=L/dx+1, endpoint=True)
 gridH = np.linspace(dx/2.0, L-dx/2.0, num=L/dx,   endpoint=True)
@@ -37,10 +31,10 @@ gridH = np.linspace(dx/2.0, L-dx/2.0, num=L/dx,   endpoint=True)
 # ---- Sources ----------------------------------------------------------------
 # Initial field
 spread = 1/math.sqrt(2.0)
-initialE = gaussianFunction(gridE, L/2, spread)
+# initialE = gaussianFunction(gridE, L/2, spread)
 
 # Plane wave illumination
-totalFieldBox = (L*1/4, L*3/4)
+totalFieldBox = (L*1/8, L*7/8)
 delay  = 8e-9
 spread = 2e-9
  
@@ -66,7 +60,8 @@ hNew = np.zeros(gridH.size)
 if 'initialE' in locals():
     eOld = initialE
 
-# totalFieldLeft = np.searchSorted(gridE, totalFieldBox()[0])
+totalFieldIndices = np.searchsorted(gridE, totalFieldBox)
+shift = (gridE[totalFieldIndices[1]] - gridE[totalFieldIndices[0]]) / c0 
 
 # Determines recursion coefficients
 cE = dt / eps0 / dx
@@ -76,6 +71,9 @@ cH = dt / mu0  / dx
 print('--- Processing starts---')
 tic = time.time();
 
+w = 2*math.pi * 100e6;
+k = c0 / w;
+
 t = 0.0
 for n in range(numberOfTimeSteps):
     # --- Updates E field ---
@@ -83,12 +81,9 @@ for n in range(numberOfTimeSteps):
         eNew[i] = eOld[i] + cE * (hOld[i-1] - hOld[i])
      
     # E field boundary conditions
-    # Sources
-#     ez(excPoint,2) = ez(excPoint,2) + exp(- 0.5*((t-delay)/spread)^2);
-#     
-#     phaseShift = (x(scaPoint) - x(excPoint)) / c0;
-#     ez(scaPoint,2) = ez(scaPoint,2) - ...
-#      exp(- 0.5*((t-delay-phaseShift)/spread)^2);
+    # Sources   
+    eNew[totalFieldIndices[0]] = eNew[totalFieldIndices[0]] + gaussianFunction(t, delay, spread)
+    eNew[totalFieldIndices[1]] = eNew[totalFieldIndices[1]] - gaussianFunction(t, delay+shift, spread)
 
     # PEC
 #     eNew[ 0] = 0.0;
@@ -108,11 +103,9 @@ for n in range(numberOfTimeSteps):
     
     # H field boundary conditions
     # Sources
-#     hy(excPoint,2) = hy(excPoint,2) + ...
-#          exp(- 0.5*((t+dt/2-delay)/spread)^2)/eta0;
-#     hy(scaPoint,2) = hy(scaPoint,2) - ...
-#          exp(- 0.5*((t+dt/2-delay-phaseShift)/spread)^2)/eta0;
-      
+    hNew[totalFieldIndices[0]-1] = hNew[totalFieldIndices[0]-1] + gaussianFunction(t, delay, spread) / imp0
+    hNew[totalFieldIndices[1]-1] = hNew[totalFieldIndices[1]-1] - gaussianFunction(t, delay+shift, spread) / imp0
+          
     # --- Updates output requests ---
     probeE[:,n] = eNew[:]
     probeH[:,n] = hNew[:]

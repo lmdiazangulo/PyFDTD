@@ -14,10 +14,10 @@ imp0 = math.sqrt(mu0 / eps0)
 # ==== Inputs / Pre-processing ================================================ 
 # ---- Problem definition -----------------------------------------------------
 L         = 10.0
-dx        = 0.05
-dy        = 0.05
-finalTime = L/c0*2
-cfl       = .6
+dx        = 0.1
+dy        = 0.1
+finalTime = L/c0*5
+cfl       = .99
 
 gridEX = np.linspace(0,      L,        num=L/dx+1, endpoint=True)
 gridEY = np.linspace(0,      L,        num=L/dy+1, endpoint=True)
@@ -80,8 +80,8 @@ for n in range(numberOfTimeSteps):
     # --- Updates E field ---
     for i in range(1, gridEX.size-1):
         for j in range(1, gridEY.size-1):
-            exNew[i][j] = exOld[i][j] + cEy * (hzOld[i  ][j+1] - hzOld[i][j])
-            eyNew[i][j] = eyOld[i][j] - cEx * (hzOld[i+1][j  ] - hzOld[i][j])
+            exNew[i][j] = exOld[i][j] + cEy * (hzOld[i][j] - hzOld[i  ][j-1])
+            eyNew[i][j] = eyOld[i][j] - cEx * (hzOld[i][j] - hzOld[i-1][j  ])
      
     # E field boundary conditions
     
@@ -97,12 +97,6 @@ for n in range(numberOfTimeSteps):
             hzNew[i][j] = hzOld[i][j] - cHx * (eyNew[i+1][j  ] - eyNew[i][j]) +\
                                         cHy * (exNew[i  ][j+1] - exNew[i][j])
     
-    # H field boundary conditions
-    # Sources
-#     hy(excPoint,2) = hy(excPoint,2) + ...
-#          exp(- 0.5*((t+dt/2-delay)/spread)^2)/eta0;
-#     hy(scaPoint,2) = hy(scaPoint,2) - ...
-#          exp(- 0.5*((t+dt/2-delay-phaseShift)/spread)^2)/eta0;
       
     # --- Updates output requests ---
     probeH[:,:,n] = hzNew[:,:]
@@ -113,6 +107,7 @@ for n in range(numberOfTimeSteps):
     eyOld[:] = eyNew[:]
     hzOld[:] = hzNew[:]
     t += dt
+    print ("Time step: %d of %d" % (n, numberOfTimeSteps-1))
 
 tictoc = time.time() - tic;
 print('--- Processing finished ---')
@@ -121,34 +116,23 @@ print("CPU Time: %f [s]" % tictoc)
 # ==== Post-processing ========================================================
 
 # --- Creates animation ---
-fig = plt.figure(figsize=(8,4))
-ax1 = fig.add_subplot(1, 2, 1)
-ax1 = plt.axes(xlim=(gridE[0], gridE[-1]), ylim=(-1.1, 1.1))
-ax1.grid(color='gray', linestyle='--', linewidth=.2)
-ax1.set_xlabel('X coordinate [m]')
-ax1.set_ylabel('Field')
-line1,    = ax1.plot([], [], 'o', markersize=1)
-timeText1 = ax1.text(0.02, 0.95, '', transform=ax1.transAxes)
-
-ax2 = fig.add_subplot(2, 2, 2)
-ax2 = plt.axes(xlim=(gridE[0], gridE[-1]), ylim=(-1.1, 1.1))
-ax2.grid(color='gray', linestyle='--', linewidth=.2)
-line2,    = ax2.plot([], [], 'o', markersize=1)
-timeText2 = ax2.text(0.02, 0.95, '', transform=ax2.transAxes)
+fig = plt.figure()
+ax = fig.add_subplot(1, 1, 1)
+#ax = plt.axes(xlim=(gridE[0], gridE[-1]), ylim=(-1.1, 1.1))
+ax.set_xlabel('X coordinate [m]')
+ax.set_ylabel('Y coordinate [m]')
+line = plt.imshow(probeH[:,:,0], animated=True, vmin=-0.5, vmax=0.5)
+timeText = ax.text(0.02, 0.95, '', transform=ax.transAxes)
 
 def init():
-    line1.set_data([], [])
-    timeText1.set_text('')
-    line2.set_data([], [])
-    timeText2.set_text('')
-    return line1, timeText1, line2, timeText2
+    line.set_array(probeH[:,:,0])
+    timeText.set_text('')
+    return line, timeText
 
 def animate(i):
-    line1.set_data(gridE, probeE[:,i])
-    timeText1.set_text('Time = %2.1f [ns]' % (probeTime[i]*1e9))
-    line2.set_data(gridH, probeH[:,i]*100)
-    timeText2.set_text('Time = %2.1f [ns]' % (probeTime[i]*1e9))
-    return line1, timeText1, line2, timeText2
+    line.set_array(probeH[:,:,i])
+    timeText.set_text('Time = %2.1f [ns]' % (probeTime[i]*1e9))
+    return line, timeText
 
 anim = animation.FuncAnimation(fig, animate, init_func=init,
                                frames=nSamples, interval=50, blit=True)

@@ -10,6 +10,31 @@ c0   = scipy.constants.speed_of_light
 mu0  = scipy.constants.mu_0
 eps0 = scipy.constants.epsilon_0
 imp0 = math.sqrt(mu0 / eps0)
+L         = 10.0
+dx        = 0.05
+finalTime = L/c0*2
+cfl       = .8
+
+totalFieldBox_lim = np.array((L*1./4., L*3./4.))
+totalFieldBox_len = totalFieldBox_lim[1] - totalFieldBox_lim[0]
+
+delay  = 8e-9
+spread = 2e-9
+
+xini = 20
+xfin = 40
+yini = 30
+yfin = 60
+
+
+def gaussianFunction(x, x0, spread):
+    # Cast function to a numpy array
+    x = x*np.ones(1, dtype=float)
+    gaussian = np.zeros(x.size, dtype=float)
+    for i in range(x.size):
+        gaussian[i] = math.exp( - math.pow(x[i] - x0, 2) /
+                                  (2.0 * math.pow(spread, 2)) )
+    return gaussian
 
 # ==== Inputs / Pre-processing ================================================ 
 # ---- Problem definition -----------------------------------------------------
@@ -29,6 +54,7 @@ gridHY = np.linspace(dx/2.0, L-dx/2.0, num=L/dy,   endpoint=True)
 # ---- Boundary conditions ----------------------------------------------------
  
 # ---- Sources ----------------------------------------------------------------
+"""
 # Initial field
 spread   = 1.0
 center   = (L/2.0, L/2.0)
@@ -39,7 +65,7 @@ for i in range(gridHX.size):
         initialH[i,j] = math.exp( 
             - ((gridHX[i]-center[0])**2 + (gridHY[j]-center[1])**2) /
             math.sqrt(2.0) / spread)
-
+"""
  
 # ---- Output requests --------------------------------------------------------
 samplingPeriod = 0.0
@@ -55,12 +81,12 @@ nSamples  = int( math.floor(finalTime/samplingPeriod) )
 probeH    = np.zeros((gridHX.size, gridHY.size, nSamples))
 probeTime = np.zeros(nSamples) 
 
-exOld = np.zeros((gridEX.size, gridEY.size))
-exNew = np.zeros((gridEX.size, gridEY.size))
-eyOld = np.zeros((gridEX.size, gridEY.size))
-eyNew = np.zeros((gridEX.size, gridEY.size))
-hzOld = np.zeros((gridHX.size, gridHY.size))
-hzNew = np.zeros((gridHX.size, gridHY.size))
+exOld = np.zeros((gridEX.size, gridEY.size), dtype=float)
+exNew = np.zeros((gridEX.size, gridEY.size), dtype=float)
+eyOld = np.zeros((gridEX.size, gridEY.size), dtype=float)
+eyNew = np.zeros((gridEX.size, gridEY.size), dtype=float)
+hzOld = np.zeros((gridHX.size, gridHY.size), dtype=float)
+hzNew = np.zeros((gridHX.size, gridHY.size), dtype=float)
 
 if 'initialH' in locals():
     hzOld = initialH
@@ -82,7 +108,13 @@ for n in range(numberOfTimeSteps):
         for j in range(1, gridEY.size-1):
             exNew[i][j] = exOld[i][j] + cEy * (hzOld[i][j] - hzOld[i  ][j-1])
             eyNew[i][j] = eyOld[i][j] - cEx * (hzOld[i][j] - hzOld[i-1][j  ])
-     
+    
+    for j in range(yini, yfin+1):           
+        eyNew[xini][j] += gaussianFunction(dt*n, delay, spread)
+        eyNew[xfin][j] -= gaussianFunction(
+                dt*n + (xfin-xini)*dx/c0, delay, spread)    
+
+
     # E field boundary conditions
     
     # PEC
@@ -96,7 +128,11 @@ for n in range(numberOfTimeSteps):
         for j in range(gridHX.size):
             hzNew[i][j] = hzOld[i][j] - cHx * (eyNew[i+1][j  ] - eyNew[i][j]) +\
                                         cHy * (exNew[i  ][j+1] - exNew[i][j])
-    
+        
+    for j in range(yini, yfin+1):           
+        hzNew[xini-1][j] += gaussianFunction(dt*n, delay, spread)
+        hzNew[xfin-1][j] -= gaussianFunction(
+                dt*n + (xfin-xini)*dx/c0, delay, spread)  
       
     # --- Updates output requests ---
     probeH[:,:,n] = hzNew[:,:]

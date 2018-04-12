@@ -11,8 +11,14 @@ mu0  = scipy.constants.mu_0
 eps0 = scipy.constants.epsilon_0
 imp0 = math.sqrt(mu0 / eps0)
 
-def gaussianFunction(t, t0, spread):
-    return math.exp(- math.pow(t-t0, 2) / (2.0 * math.pow(spread, 2)) )
+def gaussianFunction(x, x0, spread):
+    # Cast function to a numpy array
+    x = x*np.ones(1)
+    gaussian = np.zeros(x.size)
+    for i in range(x.size):
+        gaussian[i] = math.exp( - math.pow(x[i] - x0, 2) /
+                                  (2.0 * math.pow(spread, 2)) )
+    return gaussian
 
 # ==== Inputs / Pre-processing ================================================ 
 # ---- Problem definition -----------------------------------------------------

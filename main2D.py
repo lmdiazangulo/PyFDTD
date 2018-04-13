@@ -22,7 +22,7 @@ cfl       = .99
 gridEX = np.linspace(0,      L,        num=L/dx+1, endpoint=True)
 gridEY = np.linspace(0,      L,        num=L/dy+1, endpoint=True)
 gridHX = np.linspace(dx/2.0, L-dx/2.0, num=L/dx,   endpoint=True)
-gridHY = np.linspace(dx/2.0, L-dx/2.0, num=L/dy,   endpoint=True)
+gridHY = np.linspace(dy/2.0, L-dy/2.0, num=L/dy,   endpoint=True)
 
 # ---- Materials --------------------------------------------------------------
 

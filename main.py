@@ -18,20 +18,31 @@ def gaussianFunction(t, t0, spread):
 # ---- Problem definition -----------------------------------------------------
 L         = 10.0
 dx        = 0.05
-finalTime = L/c0*2
+finalTime = L / c0 * 2.0
 cfl       = .99
 
 gridE = np.linspace(0,      L,        num=L/dx+1, endpoint=True)
 gridH = np.linspace(dx/2.0, L-dx/2.0, num=L/dx,   endpoint=True)
 
 # ---- Materials --------------------------------------------------------------
+# PML
+pmlStart = 3.0 / 4.0 * L
+pmlSigmaE0 = 1e1
+pmlSigmaH0 = pmlSigmaE0*mu0/eps0
 
 # ---- Boundary conditions ----------------------------------------------------
  
 # ---- Sources ----------------------------------------------------------------
 # Initial field
 spread = 1/math.sqrt(2.0)
-# initialE = gaussianFunction(gridE, L/2, spread)
+
+initialE = np.zeros(gridE.size)
+for i in range(initialE.size):
+    initialE[i] = math.exp(- math.pow(gridE[i] - L/4.0, 2) / (2.0 * math.pow(spread, 2)) )
+
+initialH = np.zeros(gridH.size)
+for i in range(initialH.size):
+    initialH[i] = math.exp(- math.pow(gridH[i] - L/4.0 - dx/2, 2) / (2.0 * math.pow(spread, 2)) ) / imp0
 
 # Plane wave illumination
 totalFieldBox = (L*1/8, L*7/8)
@@ -59,9 +70,17 @@ hOld = np.zeros(gridH.size)
 hNew = np.zeros(gridH.size)
 if 'initialE' in locals():
     eOld = initialE
+if 'initialE' in locals():
+    hOld = initialH
 
 totalFieldIndices = np.searchsorted(gridE, totalFieldBox)
 shift = (gridE[totalFieldIndices[1]] - gridE[totalFieldIndices[0]]) / c0 
+
+pmlIndex = np.searchsorted(gridE, 3.0*L/4.0)
+dOld = np.zeros(gridE.size)
+dNew = np.zeros(gridE.size)
+bOld = np.zeros(gridH.size)
+bNew = np.zeros(gridH.size)
 
 # Determines recursion coefficients
 cE = dt / eps0 / dx
@@ -80,31 +99,41 @@ for n in range(numberOfTimeSteps):
     for i in range(1, gridE.size-1):
         eNew[i] = eOld[i] + cE * (hOld[i-1] - hOld[i])
      
+    for i in range(pmlIndex, gridE.size-1):
+        pmlSigmaE = pmlSigmaE0*pow((gridE[i]-pmlStart)/(L - pmlStart),3)
+        eNew[i] = (2*eps0 - dt*pmlSigmaE)/(2*eps0 + dt*pmlSigmaE)*eOld[i] + \
+                    2*dt/(2*eps0+dt*pmlSigmaE)/dx*(hOld[i-1] - hOld[i])
+
     # E field boundary conditions
     # Sources   
-    eNew[totalFieldIndices[0]] = eNew[totalFieldIndices[0]] + gaussianFunction(t, delay, spread)
-    eNew[totalFieldIndices[1]] = eNew[totalFieldIndices[1]] - gaussianFunction(t, delay+shift, spread)
+#     eNew[totalFieldIndices[0]] = eNew[totalFieldIndices[0]] + gaussianFunction(t, delay, spread)
+#     eNew[totalFieldIndices[1]] = eNew[totalFieldIndices[1]] - gaussianFunction(t, delay+shift, spread)
 
     # PEC
-#     eNew[ 0] = 0.0;
-#     eNew[-1] = 0.0;
+    eNew[ 0] = 0.0;
+    eNew[-1] = 0.0;
     
     # PMC
 #     eNew[ 0] = eOld[ 0] - 2.0 * cE * hOld[ 0]
 #     eNew[-1] = eOld[-1] + 2.0 * cE * hOld[-1]
     
     # Mur ABC
-    eNew[ 0] = eOld[ 1] + (c0*dt-dx)/(c0*dt+dx) * (eNew[ 1] - eOld[ 0])         
-    eNew[-1] = eOld[-2] + (c0*dt-dx)/(c0*dt+dx) * (eNew[-2] - eOld[-1]) 
+#     eNew[ 0] = eOld[ 1] + (c0*dt-dx)/(c0*dt+dx) * (eNew[ 1] - eOld[ 0])         
+#     eNew[-1] = eOld[-2] + (c0*dt-dx)/(c0*dt+dx) * (eNew[-2] - eOld[-1]) 
 
     # --- Updates H field ---
     for i in range(gridH.size):
         hNew[i] = hOld[i] + cH * (eNew[i] - eNew[i+1])
+        
+    for i in range(pmlIndex-1, gridH.size):
+        pmlSigmaH = pmlSigmaH0*pow((gridH[i]-pmlStart)/(L - pmlStart),3)
+        hNew[i] = (2*mu0 - dt*pmlSigmaH)/(2*mu0 + dt*pmlSigmaH)*hOld[i] + \
+                  2*dt/(2*mu0+dt*pmlSigmaH)*(eNew[i] - eNew[i+1])/dx
     
     # H field boundary conditions
     # Sources
-    hNew[totalFieldIndices[0]-1] = hNew[totalFieldIndices[0]-1] + gaussianFunction(t, delay, spread) / imp0
-    hNew[totalFieldIndices[1]-1] = hNew[totalFieldIndices[1]-1] - gaussianFunction(t, delay+shift, spread) / imp0
+#     hNew[totalFieldIndices[0]-1] = hNew[totalFieldIndices[0]-1] + gaussianFunction(t, delay, spread) / imp0
+#     hNew[totalFieldIndices[1]-1] = hNew[totalFieldIndices[1]-1] - gaussianFunction(t, delay+shift, spread) / imp0
           
     # --- Updates output requests ---
     probeE[:,n] = eNew[:]

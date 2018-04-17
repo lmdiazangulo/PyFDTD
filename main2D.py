@@ -11,9 +11,13 @@ mu0  = scipy.constants.mu_0
 eps0 = scipy.constants.epsilon_0
 imp0 = math.sqrt(mu0 / eps0)
 L         = 10.0
-dx        = 0.05
-finalTime = L/c0*2
-cfl       = .8
+dx        = 0.1
+dy        = 0.1
+finalTime = 0.25*L/c0*2
+cfl       = .99
+omega     = 0.35
+
+
 
 totalFieldBox_lim = np.array((L*1./4., L*3./4.))
 totalFieldBox_len = totalFieldBox_lim[1] - totalFieldBox_lim[0]
@@ -21,9 +25,9 @@ totalFieldBox_len = totalFieldBox_lim[1] - totalFieldBox_lim[0]
 delay  = 8e-9
 spread = 2e-9
 
-xini = 20
-xfin = 40
-yini = 30
+xini = 10
+xfin = 50
+yini = 15
 yfin = 60
 
 
@@ -34,15 +38,14 @@ def gaussianFunction(x, x0, spread):
     for i in range(x.size):
         gaussian[i] = math.exp( - math.pow(x[i] - x0, 2) /
                                   (2.0 * math.pow(spread, 2)) )
-    return gaussian
+    return gaussianp
 
+def planewave(x, tiempo, omega, c0, desfase=0):
+    y = math.sin((omega/c0)*x - omega*tiempo + desfase)
+    return y
 # ==== Inputs / Pre-processing ================================================ 
 # ---- Problem definition -----------------------------------------------------
-L         = 10.0
-dx        = 0.1
-dy        = 0.1
-finalTime = L/c0*5
-cfl       = .99
+
 
 gridEX = np.linspace(0,      L,        num=L/dx+1, endpoint=True)
 gridEY = np.linspace(0,      L,        num=L/dy+1, endpoint=True)
@@ -110,9 +113,10 @@ for n in range(numberOfTimeSteps):
             eyNew[i][j] = eyOld[i][j] - cEx * (hzOld[i][j] - hzOld[i-1][j  ])
     
     for j in range(yini, yfin+1):           
-        eyNew[xini][j] += gaussianFunction(dt*n, delay, spread)
-        eyNew[xfin][j] -= gaussianFunction(
-                dt*n + (xfin-xini)*dx/c0, delay, spread)    
+        eyNew[xini][j] += planewave(xini*dx, dt*n, omega, c0, desfase=0)
+        if n*dt >= (xfin-xini)*dx/c0:
+            eyNew[xfin][j] -= planewave(xfin*dx, dt*n, omega, c0, desfase=0)
+  
 
 
     # E field boundary conditions
@@ -129,10 +133,10 @@ for n in range(numberOfTimeSteps):
             hzNew[i][j] = hzOld[i][j] - cHx * (eyNew[i+1][j  ] - eyNew[i][j]) +\
                                         cHy * (exNew[i  ][j+1] - exNew[i][j])
         
-    for j in range(yini, yfin+1):           
-        hzNew[xini-1][j] += gaussianFunction(dt*n, delay, spread)
-        hzNew[xfin-1][j] -= gaussianFunction(
-                dt*n + (xfin-xini)*dx/c0, delay, spread)  
+    #for j in range(yini, yfin+1):           
+     #   hzNew[xini-1][j] += gaussianFunction(dt*n, delay, spread)
+     #   hzNew[xfin-1][j] -= gaussianFunction(
+      #          dt*n + (xfin-xini)*dx/c0, delay, spread)  
       
     # --- Updates output requests ---
     probeH[:,:,n] = hzNew[:,:]

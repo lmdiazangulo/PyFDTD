@@ -10,6 +10,7 @@ c0   = scipy.constants.speed_of_light
 mu0  = scipy.constants.mu_0
 eps0 = scipy.constants.epsilon_0
 imp0 = math.sqrt(mu0 / eps0)
+
 L         = 10.0
 dx        = 0.1
 dy        = 0.1
@@ -46,6 +47,14 @@ def planewave(x, tiempo, omega, c0, desfase=0):
 # ==== Inputs / Pre-processing ================================================ 
 # ---- Problem definition -----------------------------------------------------
 
+
+# Ilumination properties
+delay  = 8e-9
+spread = 2e-9
+xini = 20
+xfin = 40
+yini = 30
+yfin = 60
 
 gridEX = np.linspace(0,      L,        num=L/dx+1, endpoint=True)
 gridEY = np.linspace(0,      L,        num=L/dy+1, endpoint=True)

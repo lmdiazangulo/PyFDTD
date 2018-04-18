@@ -16,7 +16,7 @@ dx        = 0.1
 dy        = 0.1
 finalTime = 0.25*L/c0*2
 cfl       = .99
-omega     = 0.35
+omega     = 1e9
 
 
 
@@ -27,7 +27,7 @@ delay  = 8e-9
 spread = 2e-9
 
 xini = 10
-xfin = 50
+xfin = 80
 yini = 15
 yfin = 60
 
@@ -51,10 +51,7 @@ def planewave(x, tiempo, omega, c0, desfase=0):
 # Ilumination properties
 delay  = 8e-9
 spread = 2e-9
-xini = 20
-xfin = 40
-yini = 30
-yfin = 60
+
 
 gridEX = np.linspace(0,      L,        num=L/dx+1, endpoint=True)
 gridEY = np.linspace(0,      L,        num=L/dy+1, endpoint=True)
@@ -142,10 +139,10 @@ for n in range(numberOfTimeSteps):
             hzNew[i][j] = hzOld[i][j] - cHx * (eyNew[i+1][j  ] - eyNew[i][j]) +\
                                         cHy * (exNew[i  ][j+1] - exNew[i][j])
         
-    #for j in range(yini, yfin+1):           
-     #   hzNew[xini-1][j] += gaussianFunction(dt*n, delay, spread)
-     #   hzNew[xfin-1][j] -= gaussianFunction(
-      #          dt*n + (xfin-xini)*dx/c0, delay, spread)  
+    for j in range(yini, yfin+1):                 
+        hzNew[xini-1][j] +=planewave(xini*dx, dt*n, omega, c0, desfase=0)/imp0
+        if n*dt >= (xfin-xini)*dx/c0:
+            hzNew[xfin-1][j] -= planewave(xfin*dx, dt*n, omega, c0, desfase=0)/imp0
       
     # --- Updates output requests ---
     probeH[:,:,n] = hzNew[:,:]
@@ -170,7 +167,7 @@ ax = fig.add_subplot(1, 1, 1)
 #ax = plt.axes(xlim=(gridE[0], gridE[-1]), ylim=(-1.1, 1.1))
 ax.set_xlabel('X coordinate [m]')
 ax.set_ylabel('Y coordinate [m]')
-line = plt.imshow(probeH[:,:,0], animated=True, vmin=-0.5, vmax=0.5)
+line = plt.imshow(probeH[:,:,0], animated=True, vmin=-1e-3, vmax=1e3)
 timeText = ax.text(0.02, 0.95, '', transform=ax.transAxes)
 
 def init():

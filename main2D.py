@@ -63,18 +63,7 @@ gridHY = np.linspace(dx/2.0, L-dx/2.0, num=L/dy,   endpoint=True)
 # ---- Boundary conditions ----------------------------------------------------
  
 # ---- Sources ----------------------------------------------------------------
-"""
-# Initial field
-spread   = 1.0
-center   = (L/2.0, L/2.0)
 
-initialH = np.zeros((gridHX.size, gridHY.size))
-for i in range(gridHX.size):
-    for j in range(gridHY.size):
-        initialH[i,j] = math.exp( 
-            - ((gridHX[i]-center[0])**2 + (gridHY[j]-center[1])**2) /
-            math.sqrt(2.0) / spread)
-"""
  
 # ---- Output requests --------------------------------------------------------
 samplingPeriod = 0.0
@@ -117,12 +106,15 @@ for n in range(numberOfTimeSteps):
         for j in range(1, gridEY.size-1):
             exNew[i][j] = exOld[i][j] + cEy * (hzOld[i][j] - hzOld[i  ][j-1])
             eyNew[i][j] = eyOld[i][j] - cEx * (hzOld[i][j] - hzOld[i-1][j  ])
-    
+  
     for j in range(yini, yfin+1):           
         eyNew[xini][j] += planewave(xini*dx, dt*n, omega, c0, desfase=0)
         if n*dt >= (xfin-xini)*dx/c0:
             eyNew[xfin][j] -= planewave(xfin*dx, dt*n, omega, c0, desfase=0)
-  
+    for i in range(xini, xfin+1):           
+        if n*dt >= (i-xini)*dx/c0:
+            eyNew[i][yini] -= planewave(i*dx, dt*n, omega, c0, desfase=0)
+            eyNew[i][yfin] -= planewave(i*dx, dt*n, omega, c0, desfase=0)  
 
 
     # E field boundary conditions
@@ -165,9 +157,9 @@ print("CPU Time: %f [s]" % tictoc)
 fig = plt.figure()
 ax = fig.add_subplot(1, 1, 1)
 #ax = plt.axes(xlim=(gridE[0], gridE[-1]), ylim=(-1.1, 1.1))
-ax.set_xlabel('X coordinate [m]')
-ax.set_ylabel('Y coordinate [m]')
-line = plt.imshow(probeH[:,:,0], animated=True, vmin=-1e-3, vmax=1e3)
+ax.set_xlabel('Y coordinate [m]')
+ax.set_ylabel('X coordinate [m]')
+line = plt.imshow(probeH[:,:,0], animated=True, vmin=-1e-3, vmax=1e-3)
 timeText = ax.text(0.02, 0.95, '', transform=ax.transAxes)
 
 def init():

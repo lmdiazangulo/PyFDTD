@@ -27,7 +27,7 @@ gridH = np.linspace(dx/2.0, L-dx/2.0, num=L/dx,   endpoint=True)
 # ---- Materials --------------------------------------------------------------
 # PML
 pmlStart = 3.0 / 4.0 * L
-pmlSigmaE0 = 1e1
+pmlSigmaE0 = 0.1
 pmlSigmaH0 = pmlSigmaE0*mu0/eps0
 
 # ---- Boundary conditions ----------------------------------------------------

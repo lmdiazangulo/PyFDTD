@@ -20,42 +20,44 @@ finalTime = 0.5*L/c0*2
 cfl       = .99
 omega     = 1e8
 
-
-
 totalFieldBox_lim = np.array((L*1./4., L*3./4.))
 totalFieldBox_len = totalFieldBox_lim[1] - totalFieldBox_lim[0]
 
 delay  = 8e-9
 spread = 2e-9
 
-xini = 80
-xfin = 140
-yini = 60
-yfin = 160 
+xini = 20
+xfin = 80
+yini = 20
+yfin = 180 
 
 def gaussianFunction(x, x0, spread):
     # Cast function to a numpy array
     x = x*np.ones(1, dtype=float)
     gaussian = np.zeros(x.size, dtype=float)
     for i in range(x.size):
-        gaussian[i] = math.exp( - math.pow(x[i] - x0, 2) /
-                                  (2.0 * math.pow(spread, 2)) )
+        gaussian[i] = np.exp( - np.power(x[i] - x0, 2) /
+                                  (2.0 * np.power(spread, 2)) )
     return gaussian
 
 def gaussian(x, tiempo, omega, c0, desfase=0):
     # Cast function to a numpy array
     x = x*np.ones(1, dtype=float)
-    gaussian = np.zeros(x.size, dtype=float)
-    for i in range(x.size):
-        gaussian[i] = math.exp(
-                - math.pow(-x/c0 + tiempo - desfase, 2) /
-                (2.0 * math.pow(spread, 2)) )
+    gaussian = np.exp(
+            - np.power(-x/c0 + tiempo - desfase, 2) /
+            (2.0 * np.power(spread, 2)) )
+#    gaussian = np.zeros(x.size, dtype=float)
+#    for i in range(x.size):
+#        gaussian[i] = np.exp(
+#                - np.power(-x/c0 + tiempo - desfase, 2) /
+#                (2.0 * np.power(spread, 2)) )
     return gaussian
 
-
 def planewave(x, tiempo, omega, c0, desfase=0):
-    y = math.sin((omega/c0)*x - omega*tiempo + desfase)
+    y = np.sin((omega/c0)*x - omega*tiempo + desfase)
     return y
+
+
 # ==== Inputs / Pre-processing ================================================ 
 # ---- Problem definition -----------------------------------------------------
 
@@ -126,11 +128,11 @@ for n in range(numberOfTimeSteps):
     for i in range(xini, xfin+1):           
         if n*dt >= (i-xini)*dx/c0:
             # Engañamos a la 1a dentro para que parezca que la onda sigue a la izq.
-            exNew[i][yini] = exOld[i][yini] + cEy * (hzOld[i][yini] - (hzOld[i  ][yini-1] + gaussian((i-1)*dx, dt*n, omega, c0, desfase=delay)/imp0))
+            exNew[i][yini] = exOld[i][yini] + cEy * (hzOld[i][yini] - (hzOld[i  ][yini-1] + gaussian((i+1)*dx, dt*n, omega, c0, desfase=delay)/imp0))
             # (sim.) Cambiamos a dif. progresivas y engañamos a la ultima dentro para que parezca que la onda sigue a la dcha.
             #exNew[i][yfin] = exOld[i][yfin] + cEy * ((hzOld[i][yfin+1] + gaussian((i-1)*dx, dt*n, omega, c0, desfase=delay)/imp0) - hzOld[i  ][yfin] )
             # Engañamos a la primera fuera para que ignore la onda a la izq.
-            exNew[i][yfin+1] = exOld[i][yfin+1] + cEy * (hzOld[i][yfin+1] - (hzOld[i  ][yfin+1-1] - gaussian((i-1)*dx, dt*n, omega, c0, desfase=delay)/imp0))
+            exNew[i][yfin+1] = exOld[i][yfin+1] + cEy * (hzOld[i][yfin+1] - (hzOld[i  ][yfin+1-1] - gaussian((i+1)*dx, dt*n, omega, c0, desfase=delay)/imp0))
             # (sim.) Cambiamos a dif. progesivas y engañamos a la ultima fuera para que ignore la onda a la dcha.
             #exNew[i][yini-1] = exOld[i][yini-1] + cEy * ((hzOld[i][yini] - gaussian((i-1)*dx, dt*n, omega, c0, desfase=delay)/imp0) - hzOld[i  ][yini-1] )
             
@@ -153,17 +155,19 @@ for n in range(numberOfTimeSteps):
         hzNew[xini-1][j] +=gaussian(xini*dx, dt*n, omega, c0, desfase=delay)/imp0
         if n*dt >= (xfin-xini)*dx/c0:
             hzNew[xfin-1][j] -= gaussian(xfin*dx, dt*n, omega, c0, desfase=delay)/imp0
-    for i in range(xini, xfin+1):           
-        if n*dt >= (i-xini)*dx/c0:
+
+    # TODO ESTO PARA NADA
+#    for i in range(xini, xfin+1):           
+#        if n*dt >= (i-xini)*dx/c0:
             # (sim.) Cambiamos a regresivas en la 1a dentro y engañamos para que crea que hay onda a la izq.
             #hzNew[i][yini] = (hzOld[i][yini] - cHx * ( eyNew[i][yini ] -  (eyNew[i-1][yini] + gaussian((i-1)*dx, dt*n, omega, c0, desfase=delay))) +\
             #        cHy * (exNew[i  ][yini] - exNew[i][yini-1]))
             # Engañamos a la ultima dentro para que crea que hay onda a la dcha.
-            hzNew[i][yfin] = (hzOld[i][yfin] - cHx * ((eyNew[i+1][yfin  ] + gaussian((i+1)*dx, dt*n, omega, c0, desfase=delay)) - eyNew[i][yfin]) +\
-                    cHy * (exNew[i  ][yfin+1] - exNew[i][yfin]))
+#            hzNew[i][yfin] = (hzOld[i][yfin] - cHx * ((eyNew[i+1][yfin  ] + gaussian((i+1)*dx, dt*n, omega, c0, desfase=delay)) - eyNew[i][yfin]) +\
+#                    cHy * (exNew[i  ][yfin+1] - exNew[i][yfin]))
             # Engañamos a la ultima fuera para piense que a la dcha no hay onda
-            hzNew[i][yini-1] = (hzOld[i][yini-1] - cHx * ((eyNew[i+1][yini-1 ] + gaussian((i+1)*dx, dt*n, omega, c0, desfase=delay)) - eyNew[i][yini-1]) +\
-                    cHy * (exNew[i  ][yini] - exNew[i][yini-1]))
+#            hzNew[i][yini-1] = (hzOld[i][yini-1] - cHx * ((eyNew[i+1][yini-1 ] + gaussian((i+1)*dx, dt*n, omega, c0, desfase=delay)) - eyNew[i][yini-1]) +\
+#                    cHy * (exNew[i  ][yini] - exNew[i][yini-1]))
             # (sim.) Cambiar a regresivas y engañar a la primera fuera para que piense que a su izq no hay onda
             #hzNew[i][yfin+1] = (hzOld[i][yfin+1] - cHx * ( eyNew[i][yfin+1 ] -  (eyNew[i-1][yfin+1] - gaussian((i-1)*dx, dt*n, omega, c0, desfase=delay))) +\
             #        cHy * (exNew[i  ][yfin+1] - exNew[i][yfin]))
@@ -202,6 +206,15 @@ def init():
     return line, timeText
 
 def animate(i):
+    line.set_array(probeH[:,:,i])
+    
+    # Trampa para visualizar la onda teorica
+    #auxprobeH = probeH[:,:,i]
+    #auxprobeH[:,yini-8] = gaussian(gridHX, dt*i, omega, c0, desfase=delay)/imp0
+    #auxprobeH[:,yini-7] = auxprobeH[:,yini-8]
+    #auxprobeH[:,yini-6] = auxprobeH[:,yini-8]
+    #line.set_array(auxprobeH[:,:])
+
     line.set_array(probeH[:,:,i])
     timeText.set_text('Time = %2.1f [ns]' % (probeTime[i]*1e9))
     return line, timeText

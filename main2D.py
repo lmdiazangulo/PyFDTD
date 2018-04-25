@@ -26,11 +26,10 @@ totalFieldBox_len = totalFieldBox_lim[1] - totalFieldBox_lim[0]
 delay  = 8e-9
 spread = 2e-9
 
-xini = 20
-xfin = 60
-yini = 40
-yfin = 100
-
+xini = 80
+xfin = 140
+yini = 60
+yfin = 160 
 
 def gaussianFunction(x, x0, spread):
     # Cast function to a numpy array
@@ -39,7 +38,18 @@ def gaussianFunction(x, x0, spread):
     for i in range(x.size):
         gaussian[i] = math.exp( - math.pow(x[i] - x0, 2) /
                                   (2.0 * math.pow(spread, 2)) )
-    return gaussianp
+    return gaussian
+
+def gaussian(x, tiempo, omega, c0, desfase=0):
+    # Cast function to a numpy array
+    x = x*np.ones(1, dtype=float)
+    gaussian = np.zeros(x.size, dtype=float)
+    for i in range(x.size):
+        gaussian[i] = math.exp(
+                - math.pow(-x/c0 + tiempo - desfase, 2) /
+                (2.0 * math.pow(spread, 2)) )
+    return gaussian
+
 
 def planewave(x, tiempo, omega, c0, desfase=0):
     y = math.sin((omega/c0)*x - omega*tiempo + desfase)
@@ -49,7 +59,7 @@ def planewave(x, tiempo, omega, c0, desfase=0):
 
 
 # Ilumination properties
-delay  = 8e-9
+delay  = 5e-9
 spread = 2e-9
 
 
@@ -108,13 +118,17 @@ for n in range(numberOfTimeSteps):
             eyNew[i][j] = eyOld[i][j] - cEx * (hzOld[i][j] - hzOld[i-1][j  ])
   
     for j in range(yini, yfin+1):           
-        eyNew[xini][j] += planewave(xini*dx, dt*n, omega, c0, desfase=0)
+        eyNew[xini][j] += gaussian(xini*dx, dt*n, omega, c0, desfase=delay)
         if n*dt >= (xfin-xini)*dx/c0:
-            eyNew[xfin][j] -= planewave(xfin*dx, dt*n, omega, c0, desfase=0)
+            eyNew[xfin][j] -= gaussian(xfin*dx, dt*n, omega, c0, desfase=delay)
     for i in range(xini, xfin+1):           
         if n*dt >= (i-xini)*dx/c0:
-            eyNew[i][yini] -= planewave(i*dx, dt*n, omega, c0, desfase=0)
-            eyNew[i][yfin] -= planewave(i*dx, dt*n, omega, c0, desfase=0)  
+#            eyNew[i][yini] = eyOld[i][yini] - cEx * (hzOld[i][yini] - (hzOld[i-1][yini  ] 
+#                    + gaussian((i-2)*dx, dt*n, omega, c0, desfase=delay)/imp0))
+#            eyNew[i][yfin+1] = eyOld[i][yfin+1] - cEx * (hzOld[i][yfin+1] - (hzOld[i-1][yfin+1  ] 
+#                    - gaussian((i-2)*dx, dt*n, omega, c0, desfase=delay)/imp0))
+            exNew[i][yini] = exOld[i][yini] + cEy * (hzOld[i][yini] - (hzOld[i  ][yini-1] + gaussian((i-1)*dx, dt*n, omega, c0, desfase=delay)/imp0))
+            exNew[i][yfin+1] = exOld[i][yfin+1] + cEy * (hzOld[i][yfin+1] - (hzOld[i  ][yfin+1-1] - gaussian((i-1)*dx, dt*n, omega, c0, desfase=delay)/imp0))
 
 
     # E field boundary conditions
@@ -132,13 +146,17 @@ for n in range(numberOfTimeSteps):
                                         cHy * (exNew[i  ][j+1] - exNew[i][j])
         
     for j in range(yini, yfin+1):                 
-        hzNew[xini-1][j] +=planewave(xini*dx, dt*n, omega, c0, desfase=0)/imp0
+        hzNew[xini-1][j] +=gaussian(xini*dx, dt*n, omega, c0, desfase=delay)/imp0
         if n*dt >= (xfin-xini)*dx/c0:
-            hzNew[xfin-1][j] -= planewave(xfin*dx, dt*n, omega, c0, desfase=0)/imp0
+            hzNew[xfin-1][j] -= gaussian(xfin*dx, dt*n, omega, c0, desfase=delay)/imp0
     for i in range(xini, xfin+1):           
         if n*dt >= (i-xini)*dx/c0:
-            hzNew[i][yini] -= planewave(i*dx, dt*n, omega, c0, desfase=0)/imp0
-            hzNew[i][yfin] -= planewave(i*dx, dt*n, omega, c0, desfase=0)/imp0
+            hzNew[i][yfin] = (hzOld[i][yfin] - cHx * (eyNew[i+1][yfin  ] - eyNew[i][yfin]) +\
+                    cHy * ((exNew[i  ][yfin+1] + gaussian(i*dx, dt*n, omega, c0, desfase=delay))
+                    - exNew[i][yfin]))
+            hzNew[i][yini-1] = (hzOld[i][yini-1] - cHx * (eyNew[i+1][yini-1  ] - eyNew[i][yini-1]) +\
+                    cHy * ((exNew[i  ][yini] - gaussian(i*dx, dt*n, omega, c0, desfase=delay))
+                    - exNew[i][yini-1]))
 
       
     # --- Updates output requests ---

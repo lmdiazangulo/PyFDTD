@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import numpy as np
 import math
 import scipy.constants
@@ -111,7 +113,7 @@ tic = time.time();
 
 t = 0.0
 for n in range(numberOfTimeSteps):
-    # --- Updates E field ---
+    # --- Updates E field --- (diferencias regresivas)
     for i in range(1, gridEX.size-1):
         for j in range(1, gridEY.size-1):
             exNew[i][j] = exOld[i][j] + cEy * (hzOld[i][j] - hzOld[i  ][j-1])
@@ -123,10 +125,15 @@ for n in range(numberOfTimeSteps):
             eyNew[xfin][j] -= gaussian(xfin*dx, dt*n, omega, c0, desfase=delay)
     for i in range(xini, xfin+1):           
         if n*dt >= (i-xini)*dx/c0:
+            # Engañamos a la 1a dentro para que parezca que la onda sigue a la izq.
             exNew[i][yini] = exOld[i][yini] + cEy * (hzOld[i][yini] - (hzOld[i  ][yini-1] + gaussian((i-1)*dx, dt*n, omega, c0, desfase=delay)/imp0))
-            exNew[i][yfin] = exOld[i][yfin] + cEy * ((hzOld[i][yfin+1] + gaussian((i-1)*dx, dt*n, omega, c0, desfase=delay)/imp0) - hzOld[i  ][yini] )
+            # (sim.) Cambiamos a dif. progresivas y engañamos a la ultima dentro para que parezca que la onda sigue a la dcha.
+            #exNew[i][yfin] = exOld[i][yfin] + cEy * ((hzOld[i][yfin+1] + gaussian((i-1)*dx, dt*n, omega, c0, desfase=delay)/imp0) - hzOld[i  ][yfin] )
+            # Engañamos a la primera fuera para que ignore la onda a la izq.
             exNew[i][yfin+1] = exOld[i][yfin+1] + cEy * (hzOld[i][yfin+1] - (hzOld[i  ][yfin+1-1] - gaussian((i-1)*dx, dt*n, omega, c0, desfase=delay)/imp0))
-
+            # (sim.) Cambiamos a dif. progesivas y engañamos a la ultima fuera para que ignore la onda a la dcha.
+            #exNew[i][yini-1] = exOld[i][yini-1] + cEy * ((hzOld[i][yini] - gaussian((i-1)*dx, dt*n, omega, c0, desfase=delay)/imp0) - hzOld[i  ][yini-1] )
+            
 
     # E field boundary conditions
     
@@ -136,7 +143,7 @@ for n in range(numberOfTimeSteps):
     eyNew[ 0][ :] = 0.0;
     eyNew[-1][ :] = 0.0;  
 
-    # --- Updates H field ---
+    # --- Updates H field --- (dif. progeresivas)
     for i in range(gridHX.size):
         for j in range(gridHX.size):
             hzNew[i][j] = hzOld[i][j] - cHx * (eyNew[i+1][j  ] - eyNew[i][j]) +\
@@ -148,12 +155,19 @@ for n in range(numberOfTimeSteps):
             hzNew[xfin-1][j] -= gaussian(xfin*dx, dt*n, omega, c0, desfase=delay)/imp0
     for i in range(xini, xfin+1):           
         if n*dt >= (i-xini)*dx/c0:
-            hzNew[i][yfin] = (hzOld[i][yfin] - cHx * (eyNew[i+1][yfin  ] - eyNew[i][yfin]) +\
-                    cHy * ((exNew[i  ][yfin+1] + gaussian(i*dx, dt*n, omega, c0, desfase=delay))
-                    - exNew[i][yfin]))
-            hzNew[i][yini-1] = (hzOld[i][yini-1] - cHx * (eyNew[i+1][yini-1  ] - eyNew[i][yini-1]) +\
-                    cHy * ((exNew[i  ][yini] - gaussian(i*dx, dt*n, omega, c0, desfase=delay))
-                    - exNew[i][yini-1]))
+            # (sim.) Cambiamos a regresivas en la 1a dentro y engañamos para que crea que hay onda a la izq.
+            #hzNew[i][yini] = (hzOld[i][yini] - cHx * ( eyNew[i][yini ] -  (eyNew[i-1][yini] + gaussian((i-1)*dx, dt*n, omega, c0, desfase=delay))) +\
+            #        cHy * (exNew[i  ][yini] - exNew[i][yini-1]))
+            # Engañamos a la ultima dentro para que crea que hay onda a la dcha.
+            hzNew[i][yfin] = (hzOld[i][yfin] - cHx * ((eyNew[i+1][yfin  ] + gaussian((i+1)*dx, dt*n, omega, c0, desfase=delay)) - eyNew[i][yfin]) +\
+                    cHy * (exNew[i  ][yfin+1] - exNew[i][yfin]))
+            # Engañamos a la ultima fuera para piense que a la dcha no hay onda
+            hzNew[i][yini-1] = (hzOld[i][yini-1] - cHx * ((eyNew[i+1][yini-1 ] + gaussian((i+1)*dx, dt*n, omega, c0, desfase=delay)) - eyNew[i][yini-1]) +\
+                    cHy * (exNew[i  ][yini] - exNew[i][yini-1]))
+            # (sim.) Cambiar a regresivas y engañar a la primera fuera para que piense que a su izq no hay onda
+            #hzNew[i][yfin+1] = (hzOld[i][yfin+1] - cHx * ( eyNew[i][yfin+1 ] -  (eyNew[i-1][yfin+1] - gaussian((i-1)*dx, dt*n, omega, c0, desfase=delay))) +\
+            #        cHy * (exNew[i  ][yfin+1] - exNew[i][yfin]))
+
 
       
     # --- Updates output requests ---

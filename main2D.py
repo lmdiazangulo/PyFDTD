@@ -12,11 +12,11 @@ eps0 = scipy.constants.epsilon_0
 imp0 = math.sqrt(mu0 / eps0)
 
 L         = 10.0
-dx        = 0.1
-dy        = 0.1
-finalTime = 0.25*L/c0*2
+dx        = 0.05
+dy        = 0.05
+finalTime = 0.5*L/c0*2
 cfl       = .99
-omega     = 1e9
+omega     = 1e8
 
 
 
@@ -26,10 +26,10 @@ totalFieldBox_len = totalFieldBox_lim[1] - totalFieldBox_lim[0]
 delay  = 8e-9
 spread = 2e-9
 
-xini = 10
-xfin = 80
-yini = 15
-yfin = 60
+xini = 20
+xfin = 60
+yini = 40
+yfin = 100
 
 
 def gaussianFunction(x, x0, spread):
@@ -135,6 +135,11 @@ for n in range(numberOfTimeSteps):
         hzNew[xini-1][j] +=planewave(xini*dx, dt*n, omega, c0, desfase=0)/imp0
         if n*dt >= (xfin-xini)*dx/c0:
             hzNew[xfin-1][j] -= planewave(xfin*dx, dt*n, omega, c0, desfase=0)/imp0
+    for i in range(xini, xfin+1):           
+        if n*dt >= (i-xini)*dx/c0:
+            hzNew[i][yini] -= planewave(i*dx, dt*n, omega, c0, desfase=0)/imp0
+            hzNew[i][yfin] -= planewave(i*dx, dt*n, omega, c0, desfase=0)/imp0
+
       
     # --- Updates output requests ---
     probeH[:,:,n] = hzNew[:,:]

@@ -123,11 +123,8 @@ for n in range(numberOfTimeSteps):
             eyNew[xfin][j] -= gaussian(xfin*dx, dt*n, omega, c0, desfase=delay)
     for i in range(xini, xfin+1):           
         if n*dt >= (i-xini)*dx/c0:
-#            eyNew[i][yini] = eyOld[i][yini] - cEx * (hzOld[i][yini] - (hzOld[i-1][yini  ] 
-#                    + gaussian((i-2)*dx, dt*n, omega, c0, desfase=delay)/imp0))
-#            eyNew[i][yfin+1] = eyOld[i][yfin+1] - cEx * (hzOld[i][yfin+1] - (hzOld[i-1][yfin+1  ] 
-#                    - gaussian((i-2)*dx, dt*n, omega, c0, desfase=delay)/imp0))
             exNew[i][yini] = exOld[i][yini] + cEy * (hzOld[i][yini] - (hzOld[i  ][yini-1] + gaussian((i-1)*dx, dt*n, omega, c0, desfase=delay)/imp0))
+            exNew[i][yfin] = exOld[i][yfin] + cEy * ((hzOld[i][yfin+1] + gaussian((i-1)*dx, dt*n, omega, c0, desfase=delay)/imp0) - hzOld[i  ][yini] )
             exNew[i][yfin+1] = exOld[i][yfin+1] + cEy * (hzOld[i][yfin+1] - (hzOld[i  ][yfin+1-1] - gaussian((i-1)*dx, dt*n, omega, c0, desfase=delay)/imp0))
 
 

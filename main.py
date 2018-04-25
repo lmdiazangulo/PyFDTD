@@ -4,6 +4,7 @@ import scipy.constants
 import time
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+from numpy.core.fromnumeric import size
 
 # ==== Preamble ===============================================================
 c0   = scipy.constants.speed_of_light
@@ -20,9 +21,10 @@ L         = 10.0
 dx        = 0.05
 finalTime = L/c0*2
 cfl       = .99
+TAM=2;
+gridE = np.linspace(0,      L,        num=TAM*L/dx+1, endpoint=True)
+gridH = np.linspace(dx/2.0, L-dx/2.0, num=TAM*L/dx,   endpoint=True)
 
-gridE = np.linspace(0,      L,        num=L/dx+1, endpoint=True)
-gridH = np.linspace(dx/2.0, L-dx/2.0, num=L/dx,   endpoint=True)
 
 # ---- Materials --------------------------------------------------------------
 
@@ -30,11 +32,12 @@ gridH = np.linspace(dx/2.0, L-dx/2.0, num=L/dx,   endpoint=True)
  
 # ---- Sources ----------------------------------------------------------------
 # Initial field
-spread = 1/math.sqrt(2.0)
+#spread = 1/math.sqrt(2.0)
 # initialE = gaussianFunction(gridE, L/2, spread)
 
 # Plane wave illumination
-totalFieldBox = (L*1/8, L*7/8)
+#totalFieldBox = (L*1/8, L*7/8)
+totalFieldBox = (L*1/100,L*7/8)
 delay  = 8e-9
 spread = 2e-9
  
@@ -61,7 +64,9 @@ if 'initialE' in locals():
     eOld = initialE
 
 totalFieldIndices = np.searchsorted(gridE, totalFieldBox)
-shift = (gridE[totalFieldIndices[1]] - gridE[totalFieldIndices[0]]) / c0 
+#shift = (gridE[totalFieldIndices[1]] - gridE[totalFieldIndices[0]]) / c0 
+
+shift=0
 
 # Determines recursion coefficients
 cE = dt / eps0 / dx
@@ -69,42 +74,59 @@ cH = dt / mu0  / dx
 
 # ---- Time integration -------------------------------------------------------
 print('--- Processing starts---')
-tic = time.time();
+tic = time.time()
 
-w = 2*math.pi * 100e6;
-k = c0 / w;
+w = 2*math.pi * 100e6
+k = c0 / w
+beta = w*np.sqrt(mu0*eps0)
 
 t = 0.0
+E_ExactaV= np.zeros((gridE.size, nSamples))
+E_Exacta = np.zeros(gridE.size)
+H_exactaV= np.zeros((gridH.size, nSamples))
+
 for n in range(numberOfTimeSteps):
     # --- Updates E field ---
+
     for i in range(1, gridE.size-1):
         eNew[i] = eOld[i] + cE * (hOld[i-1] - hOld[i])
-     
+        E_Exacta[i] = gaussianFunction(gridE[i], c0*t, spread*c0)
+        
+    E_ExactaV[:,n] = E_Exacta[:]
+
     # E field boundary conditions
     # Sources   
     eNew[totalFieldIndices[0]] = eNew[totalFieldIndices[0]] + gaussianFunction(t, delay, spread)
-    eNew[totalFieldIndices[1]] = eNew[totalFieldIndices[1]] - gaussianFunction(t, delay+shift, spread)
+#    eNew[0] = eNew[0] + gaussianFunction(t, delay, spread)
+#     eNew[totalFieldIndices[1]] = eNew[totalFieldIndices[1]] - gaussianFunction(t, delay+shift, spread)
 
     # PEC
-#     eNew[ 0] = 0.0;
-#     eNew[-1] = 0.0;
+#    eNew[ 0] = 0.0;
+#    eNew[-1] = 0.0;
     
     # PMC
-#     eNew[ 0] = eOld[ 0] - 2.0 * cE * hOld[ 0]
-#     eNew[-1] = eOld[-1] + 2.0 * cE * hOld[-1]
+#    eNew[ 0] = eOld[ 0] - 2.0 * cE * hOld[ 0]
+#    eNew[-1] = eOld[-1] + 2.0 * cE * hOld[-1]
     
     # Mur ABC
     eNew[ 0] = eOld[ 1] + (c0*dt-dx)/(c0*dt+dx) * (eNew[ 1] - eOld[ 0])         
     eNew[-1] = eOld[-2] + (c0*dt-dx)/(c0*dt+dx) * (eNew[-2] - eOld[-1]) 
 
+    # Periodic
+#    eNew[ 0] = eOld[ 0] + cE * (hOld[ -1] - hOld[ 0])         
+#    eNew[ -1] = eOld[ -1] + cE * (hOld[ -2] - hOld[ -1])
+
     # --- Updates H field ---
+    H_exacta=[ ]
     for i in range(gridH.size):
         hNew[i] = hOld[i] + cH * (eNew[i] - eNew[i+1])
+        H_exacta.append(gaussianFunction(gridH[i], c0*t, 1/math.sqrt(2.0)))
     
+    H_exactaV[:,n] = H_exacta[:]
     # H field boundary conditions
     # Sources
     hNew[totalFieldIndices[0]-1] = hNew[totalFieldIndices[0]-1] + gaussianFunction(t, delay, spread) / imp0
-    hNew[totalFieldIndices[1]-1] = hNew[totalFieldIndices[1]-1] - gaussianFunction(t, delay+shift, spread) / imp0
+#     hNew[totalFieldIndices[1]-1] = hNew[totalFieldIndices[1]-1] - gaussianFunction(t, delay+shift, spread) / imp0
           
     # --- Updates output requests ---
     probeE[:,n] = eNew[:]
@@ -115,6 +137,10 @@ for n in range(numberOfTimeSteps):
     eOld[:] = eNew[:]
     hOld[:] = hNew[:]
     t += dt
+
+# --- guardar en ficheros
+#np.savetxt("PMC_E%d.txt" %(TAM), ErrorE)
+#np.savetxt("PMC_H%d.txt" %(TAM), ErrorH)
 
 tictoc = time.time() - tic;
 print('--- Processing finished ---')
@@ -156,6 +182,15 @@ def animate(i):
 
 anim = animation.FuncAnimation(fig, animate, init_func=init,
                                frames=nSamples, interval=50, blit=True)
+
+#plt.show()
+
+plt.figure()
+
+#plt.figure()
+plt.plot(probeE[:,250])
+plt.plot(E_ExactaV[:,100])
+
 
 plt.show()
 

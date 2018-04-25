@@ -21,7 +21,7 @@ L         = 10.0
 dx        = 0.05
 finalTime = L/c0*2
 cfl       = .99
-TAM=2;
+TAM=1;
 gridE = np.linspace(0,      L,        num=TAM*L/dx+1, endpoint=True)
 gridH = np.linspace(dx/2.0, L-dx/2.0, num=TAM*L/dx,   endpoint=True)
 
@@ -37,7 +37,7 @@ gridH = np.linspace(dx/2.0, L-dx/2.0, num=TAM*L/dx,   endpoint=True)
 
 # Plane wave illumination
 #totalFieldBox = (L*1/8, L*7/8)
-totalFieldBox = (L*1/100,L*7/8)
+totalFieldBox = (L*1./8.,L*7./8.)
 delay  = 8e-9
 spread = 2e-9
  
@@ -81,24 +81,17 @@ k = c0 / w
 beta = w*np.sqrt(mu0*eps0)
 
 t = 0.0
-E_ExactaV= np.zeros((gridE.size, nSamples))
-E_Exacta = np.zeros(gridE.size)
-H_exactaV= np.zeros((gridH.size, nSamples))
+E_Exacta = np.zeros((1,nSamples))
+timeSamples = np.zeros((1,nSamples))
 
 for n in range(numberOfTimeSteps):
     # --- Updates E field ---
-
     for i in range(1, gridE.size-1):
         eNew[i] = eOld[i] + cE * (hOld[i-1] - hOld[i])
-        E_Exacta[i] = gaussianFunction(gridE[i], c0*t, spread*c0)
         
-    E_ExactaV[:,n] = E_Exacta[:]
-
     # E field boundary conditions
     # Sources   
     eNew[totalFieldIndices[0]] = eNew[totalFieldIndices[0]] + gaussianFunction(t, delay, spread)
-#    eNew[0] = eNew[0] + gaussianFunction(t, delay, spread)
-#     eNew[totalFieldIndices[1]] = eNew[totalFieldIndices[1]] - gaussianFunction(t, delay+shift, spread)
 
     # PEC
 #    eNew[ 0] = 0.0;
@@ -117,12 +110,9 @@ for n in range(numberOfTimeSteps):
 #    eNew[ -1] = eOld[ -1] + cE * (hOld[ -2] - hOld[ -1])
 
     # --- Updates H field ---
-    H_exacta=[ ]
     for i in range(gridH.size):
         hNew[i] = hOld[i] + cH * (eNew[i] - eNew[i+1])
-        H_exacta.append(gaussianFunction(gridH[i], c0*t, 1/math.sqrt(2.0)))
     
-    H_exactaV[:,n] = H_exacta[:]
     # H field boundary conditions
     # Sources
     hNew[totalFieldIndices[0]-1] = hNew[totalFieldIndices[0]-1] + gaussianFunction(t, delay, spread) / imp0
@@ -183,15 +173,17 @@ def animate(i):
 anim = animation.FuncAnimation(fig, animate, init_func=init,
                                frames=nSamples, interval=50, blit=True)
 
-#plt.show()
+plt.show()
 
 plt.figure()
+probeEIndex = np.searchsorted(gridE, 9.5)
+plt.plot(probeTime[:]*1e9, probeE[probeEIndex,:])
 
-#plt.figure()
-plt.plot(probeE[:,250])
-plt.plot(E_ExactaV[:,100])
-
-
+Eexacta = np.zeros((1,nSamples))
+for n in range(nSamples):
+    Eexacta[0,n] = gaussianFunction(probeTime[n], delay + 9.5/c0 - L/8.0/c0, spread)
+    
+plt.plot(probeTime[:]*1e9, Eexacta[0,:])
 plt.show()
 
 print('=== Program finished ===')

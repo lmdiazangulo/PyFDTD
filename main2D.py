@@ -16,7 +16,7 @@ imp0 = math.sqrt(mu0 / eps0)
 L         = 10.0
 dx        = 0.05
 dy        = 0.05
-finalTime = 0.5*L/c0*2
+finalTime = 0.5*L/c0
 cfl       = .99
 omega     = 1e8
 
@@ -67,10 +67,12 @@ delay  = 5e-9
 spread = 2e-9
 
 
-gridEX = np.linspace(0,      L,        num=L/dx+1, endpoint=True)
-gridEY = np.linspace(0,      L,        num=L/dy+1, endpoint=True)
-gridHX = np.linspace(dx/2.0, L-dx/2.0, num=L/dx,   endpoint=True)
-gridHY = np.linspace(dx/2.0, L-dx/2.0, num=L/dy,   endpoint=True)
+gridEXX = np.linspace(0,      L,        num=L/dx+1, endpoint=True)
+gridEXY = np.linspace(dy/2.0, L-dy/2.0, num=L/dy,   endpoint=True)
+gridEYX = np.linspace(dx/2.0, L-dx/2.0, num=L/dx,   endpoint=True)
+gridEYY = np.linspace(0,      L,        num=L/dy+1, endpoint=True)
+gridHZX = np.linspace(dx/2.0, L-dx/2.0, num=L/dx,   endpoint=True)
+gridHZY = np.linspace(dy/2.0, L-dy/2.0, num=L/dy,   endpoint=True)
 
 # ---- Materials --------------------------------------------------------------
 
@@ -90,15 +92,15 @@ numberOfTimeSteps = int( finalTime / dt )
 if samplingPeriod == 0.0:
     samplingPeriod = dt 
 nSamples  = int( math.floor(finalTime/samplingPeriod) )
-probeH    = np.zeros((gridHX.size, gridHY.size, nSamples))
+probeH    = np.zeros((gridHZX.size, gridHZY.size, nSamples))
 probeTime = np.zeros(nSamples) 
 
-exOld = np.zeros((gridEX.size, gridEY.size), dtype=float)
-exNew = np.zeros((gridEX.size, gridEY.size), dtype=float)
-eyOld = np.zeros((gridEX.size, gridEY.size), dtype=float)
-eyNew = np.zeros((gridEX.size, gridEY.size), dtype=float)
-hzOld = np.zeros((gridHX.size, gridHY.size), dtype=float)
-hzNew = np.zeros((gridHX.size, gridHY.size), dtype=float)
+exOld = np.zeros((gridEXX.size, gridEXY.size), dtype=float)
+exNew = np.zeros((gridEXX.size, gridEXY.size), dtype=float)
+eyOld = np.zeros((gridEYX.size, gridEYY.size), dtype=float)
+eyNew = np.zeros((gridEYX.size, gridEYY.size), dtype=float)
+hzOld = np.zeros((gridHZX.size, gridHZY.size), dtype=float)
+hzNew = np.zeros((gridHZX.size, gridHZY.size), dtype=float)
 
 if 'initialH' in locals():
     hzOld = initialH
@@ -116,10 +118,14 @@ tic = time.time();
 t = 0.0
 for n in range(numberOfTimeSteps):
     # --- Updates E field --- (diferencias regresivas)
-    for i in range(1, gridEX.size-1):
-        for j in range(1, gridEY.size-1):
+    for i in range(1, gridEXX.size-1):
+        for j in range(0, gridEXY.size):
             exNew[i][j] = exOld[i][j] + cEy * (hzOld[i][j] - hzOld[i  ][j-1])
+  
+    for i in range(0, gridEYX.size):
+        for j in range(1, gridEYY.size-1):
             eyNew[i][j] = eyOld[i][j] - cEx * (hzOld[i][j] - hzOld[i-1][j  ])
+  
   
     for j in range(yini, yfin+1):           
         eyNew[xini][j] += gaussian(xini*dx, dt*n, omega, c0, desfase=delay)
@@ -146,8 +152,8 @@ for n in range(numberOfTimeSteps):
     eyNew[-1][ :] = 0.0;  
 
     # --- Updates H field --- (dif. progeresivas)
-    for i in range(gridHX.size):
-        for j in range(gridHX.size):
+    for i in range(gridHZX.size):
+        for j in range(gridHZX.size):
             hzNew[i][j] = hzOld[i][j] - cHx * (eyNew[i+1][j  ] - eyNew[i][j]) +\
                                         cHy * (exNew[i  ][j+1] - exNew[i][j])
         

@@ -72,7 +72,7 @@ sigma = 2e-3
 lim1 = 120
 lim2 = 200 
 
-l = (lim1 - lim2) * dx
+l = (lim2 - lim1) * dx
 
 eOld = np.zeros(gridE.size)
 eNew = np.zeros(gridE.size)
@@ -83,13 +83,6 @@ jNew = np.zeros(gridE.size)
 
 er = np.zeros(numberOfTimeSteps)
 ei = np.zeros(numberOfTimeSteps)
-CR= np.zeros(numberOfTimeSteps)
-CR_teorico= np.zeros(numberOfTimeSteps)
-er_norm=np.zeros(numberOfTimeSteps)
-ei_norm=np.zeros(numberOfTimeSteps)
-
-
-
 
 if 'initialE' in locals():
     eOld = initialE
@@ -136,7 +129,7 @@ for n in range(numberOfTimeSteps):
     eNew[totalFieldIndices[0]] = eNew[totalFieldIndices[0]] + gaussianFunction(t, delay, spread)
     if t <= 50e-9:
         er[n] = eNew[5]
-        ei[n] = eNew[totalFieldIndices[0]]
+        ei[n] = gaussianFunction(t, delay, spread)
 
     
     # Mur ABC
@@ -164,36 +157,31 @@ for n in range(numberOfTimeSteps):
     t += dt
     
 # Transformada de fourier:
-er_fft = np.fft.fft(er)    
-ei_fft = np.fft.fft(ei)
-
-
-for i in range (numberOfTimeSteps):
-    er_norm[i] = norm(er_fft[i])
-    ei_norm[i] = norm(ei_fft[i])
-    CR[i] = er_norm[i] / ei_norm[i]
-
     
 #    print('Coeficiente de reflexion:', er_norm[i], ei_norm[i], CR[i] )
 #    print('Coeficiente de reflexion:', ei_norm)
 #print('Coeficiente de reflexion:', CR)
-    
 
-eta=np.sqrt(mu0/eps0)
+CR_teorico= np.zeros(numberOfTimeSteps, dtype=complex)
+eta0 = math.sqrt(mu0 / eps0)
 for i in range(numberOfTimeSteps):
-    aa = math.cos((freq[i]/c0) * l)
-    bb = complex(0, eta * math.sin((freq[i]/c0) * l))
-    cc = complex(0, (eta ** -1) * math.sin((freq[i]/c0) * l))
+    eps = 12 * eps0
+    eta = np.sqrt(mu0/eps)
+    k = (2 * math.pi * freq[i] * math.sqrt(mu0*eps)) ##### WARNING CHECK K
+    aa = math.cos(k*l)
+    bb = complex(0, eta * math.sin(k*l))
+    cc = complex(0, math.sin(k*l) / eta)
     dd = aa
-    CR_teorico[i]=  (aa * eta + bb - cc * eta **2 - dd * eta) / (aa * eta + bb + cc * eta **2 + dd *eta)
+    CR_teorico[i]=  (aa * eta0 + bb - cc * eta0**2 - dd * eta0) / (aa * eta0 + bb + cc * eta0**2 + dd *eta0)
 print ('CR:', CR_teorico)
 
+CR = abs(np.fft.fft(er)) / abs(np.fft.fft(ei))
+
 plt.figure(1)
-plt.plot(freq, CR_teorico)
-plt.plot(freq, CR)
+plt.plot(freq, abs(CR_teorico))
+plt.plot(freq, abs(CR))
 plt.savefig("CR.png")
 plt.show()
-
 
 
 tictoc = time.time() - tic;
@@ -239,6 +227,6 @@ def animate(i):
 anim = animation.FuncAnimation(fig, animate, init_func=init,
                                frames=nSamples, interval=50, blit=True)
 
-#plt.show()
+# plt.show()
 
 print('=== Program finished ===')

@@ -69,10 +69,10 @@ cH = dt / mu0  / dx
 
 # ---- Time integration -------------------------------------------------------
 print('--- Processing starts---')
-tic = time.time();
+tic = time.time()
 
-w = 2*math.pi * 100e6;
-k = c0 / w;
+w = 2*math.pi * 100e6
+k = c0 / w
 
 t = 0.0
 for n in range(numberOfTimeSteps):

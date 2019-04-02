@@ -14,9 +14,20 @@ imp0 = math.sqrt(mu0 / eps0)
 def gaussianFunction(t, t0, spread):
     return np.exp(- np.power(t-t0, 2) / (2.0 * np.power(spread, 2)) )
 
+#funcion que calcula el error 
+#fanal=funcion analítica
+#fexp=función calculada
 def funcionerror(fanal,fexp):
     vec = np.power(fanal[:]-fexp[:],2)
     return np.sum(vec)/np.size(vec)
+
+ 
+fig = plt.figure()
+xdata = #vector x
+ydata = #vector con los diferentes errores de mallado
+plt.xscale("log") #pone escala logaritmica ejex, para cambiarla en el eje y: "plt.yscale("log")"
+plt.plot(xdata,ydata)
+plt.show()
 
 # ==== Inputs / Pre-processing ================================================ 
 # ---- Problem definition -----------------------------------------------------

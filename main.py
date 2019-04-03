@@ -12,12 +12,12 @@ eps0 = scipy.constants.epsilon_0
 imp0 = math.sqrt(mu0 / eps0)
 
 def gaussianFunction(t, t0, spread):
-    return math.exp(- math.pow(t-t0, 2) / (2.0 * math.pow(spread, 2)) )
+    return np.exp(- np.power(t-t0, 2) / (2.0 * np.power(spread, 2)) )
 
 # ==== Inputs / Pre-processing ================================================ 
 # ---- Problem definition -----------------------------------------------------
 L         = 10.0
-dx        = 0.05
+dx        = 0.01
 finalTime = L/c0*2
 cfl       = .99
 
@@ -31,12 +31,7 @@ gridH = np.linspace(dx/2.0, L-dx/2.0, num=L/dx,   endpoint=True)
 # ---- Sources ----------------------------------------------------------------
 # Initial field
 spread = 1/math.sqrt(2.0)
-# initialE = gaussianFunction(gridE, L/2, spread)
-
-# Plane wave illumination
-totalFieldBox = (L*1/8, L*7/8)
-delay  = 8e-9
-spread = 2e-9
+initialE = gaussianFunction(gridE, L/2, spread)
  
 # ---- Output requests --------------------------------------------------------
 samplingPeriod = 0.0
@@ -60,9 +55,6 @@ hNew = np.zeros(gridH.size)
 if 'initialE' in locals():
     eOld = initialE
 
-totalFieldIndices = np.searchsorted(gridE, totalFieldBox)
-shift = (gridE[totalFieldIndices[1]] - gridE[totalFieldIndices[0]]) / c0 
-
 # Determines recursion coefficients
 cE = dt / eps0 / dx
 cH = dt / mu0  / dx
@@ -79,33 +71,15 @@ for n in range(numberOfTimeSteps):
     # --- Updates E field ---
     for i in range(1, gridE.size-1):
         eNew[i] = eOld[i] + cE * (hOld[i-1] - hOld[i])
-     
-    # E field boundary conditions
-    # Sources   
-    eNew[totalFieldIndices[0]] = eNew[totalFieldIndices[0]] + gaussianFunction(t, delay, spread)
-    eNew[totalFieldIndices[1]] = eNew[totalFieldIndices[1]] - gaussianFunction(t, delay+shift, spread)
-
     # PEC
-#     eNew[ 0] = 0.0;
-#     eNew[-1] = 0.0;
+    eNew[ 0] = 0.0
+    eNew[-1] = 0.0
     
-    # PMC
-#     eNew[ 0] = eOld[ 0] - 2.0 * cE * hOld[ 0]
-#     eNew[-1] = eOld[-1] + 2.0 * cE * hOld[-1]
-    
-    # Mur ABC
-    eNew[ 0] = eOld[ 1] + (c0*dt-dx)/(c0*dt+dx) * (eNew[ 1] - eOld[ 0])         
-    eNew[-1] = eOld[-2] + (c0*dt-dx)/(c0*dt+dx) * (eNew[-2] - eOld[-1]) 
-
     # --- Updates H field ---
     for i in range(gridH.size):
         hNew[i] = hOld[i] + cH * (eNew[i] - eNew[i+1])
     
-    # H field boundary conditions
-    # Sources
-    hNew[totalFieldIndices[0]-1] = hNew[totalFieldIndices[0]-1] + gaussianFunction(t, delay, spread) / imp0
-    hNew[totalFieldIndices[1]-1] = hNew[totalFieldIndices[1]-1] - gaussianFunction(t, delay+shift, spread) / imp0
-          
+    # H field boundary conditions        
     # --- Updates output requests ---
     probeE[:,n] = eNew[:]
     probeH[:,n] = hNew[:]
@@ -116,7 +90,7 @@ for n in range(numberOfTimeSteps):
     hOld[:] = hNew[:]
     t += dt
 
-tictoc = time.time() - tic;
+tictoc = time.time() - tic
 print('--- Processing finished ---')
 print("CPU Time: %f [s]" % tictoc)
 

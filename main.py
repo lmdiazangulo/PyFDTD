@@ -22,19 +22,19 @@ def funcionerror(fanal,fexp):
     return np.sum(vec)/np.size(vec)
 
  
-fig = plt.figure()
-xdata = #vector x
-ydata = #vector con los diferentes errores de mallado
-plt.xscale("log") #pone escala logaritmica ejex, para cambiarla en el eje y: "plt.yscale("log")"
-plt.plot(xdata,ydata)
-plt.show()
+#fig = plt.figure()
+#xdata = vector x
+#ydata = vector con los diferentes errores de mallado
+#plt.xscale("log") #pone escala logaritmica ejex, para cambiarla en el eje y: "plt.yscale("log")"
+#plt.plot(xdata,ydata)
+#plt.show()
 
 # ==== Inputs / Pre-processing ================================================ 
 # ---- Problem definition -----------------------------------------------------
 L         = 10.0
 dx        = 0.01
 finalTime = L/c0*2
-cfl       = .99
+cfl       = .99 
 
 gridE = np.linspace(0,      L,        num=L/dx+1, endpoint=True)
 gridH = np.linspace(dx/2.0, L-dx/2.0, num=L/dx,   endpoint=True)
@@ -81,6 +81,9 @@ tic = time.time()
 w = 2*math.pi * 100e6
 k = c0 / w
 
+eOld[ 0] = 0.0
+eOld[-1] = 0.0
+
 t = 0.0
 for n in range(numberOfTimeSteps):
     # --- Updates E field ---
@@ -90,10 +93,13 @@ for n in range(numberOfTimeSteps):
     eNew[1:-1]=eOld[1:-1]+ cE * (hOld[:-1]-hOld[1:]) #Es lo mismo que el for de arriba pero gracias a la librerianympy
     #[1:-1] te dice empezar no desde el primero (0) sino desde el siguiente hasta el final
     #[0:-1] te dice empezar desde el principio hasta el final
-    # PEC
-    eNew[ 0] = 0.0
-    eNew[-1] = 0.0
-    
+    # PMC
+    eNew[ 0] = eOld[0] - 2*cE*hOld[0] 
+    eNew[-1] = eOld[-1] + 2*cE*hOld[-1] 
+    #PEC
+    eNew[0]=0.0
+    eNew[-1]=0.0
+
     # --- Updates H field ---
     #for i in range(gridH.size):
     #    hNew[i] = hOld[i] + cH * (eNew[i] - eNew[i+1])

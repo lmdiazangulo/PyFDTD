@@ -1,3 +1,4 @@
+
 import numpy as np
 import math
 import scipy.constants
@@ -73,5 +74,4 @@ def animate(i):
     return line1, timeText1#, line2, timeText2
 
 anim = animation.FuncAnimation(fig, animate, init_func=init)
-
 plt.show()

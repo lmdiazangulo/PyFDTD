@@ -14,63 +14,52 @@ imp0 = math.sqrt(mu0 / eps0)
 def gaussianFunction(t, t0, spread):
     return np.exp(- np.power(t-t0, 2) / (2.0 * np.power(spread, 2)) )
 
-# #funcion que calcula el error 
-# #fanal=funcion analítica
-# #fexp=función calculada
-# def funcionerror(fanal,fexp):
-#     vec = np.power(fanal[:]-fexp[:],2)
-#     return np.sum(vec)/np.size(vec)
-
+def averagedNorm(fAnal, fExp):
+    vec = np.power(fAnal[:]-fExp[:],2)
+    return np.sum(vec)/np.size(vec)
  
-#fig = plt.figure()
-#xdata = vector x
-#ydata = vector con los diferentes errores de mallado
-#plt.xscale("log") #pone escala logaritmica ejex, para cambiarla en el eje y: "plt.yscale("log")"
-#plt.plot(xdata,ydata)
-#plt.show()
-
 # ==== Inputs / Pre-processing ================================================ 
 # ---- Problem definition -----------------------------------------------------
-L         = 10.0
+L         = 50.0
 dx        = 0.1
-finalTime = L/c0*2.5
-cfl       = 0.99 
+finalTime = L/c0*0.8
+cfl       = 0.9
+dt = cfl * dx / c0
 
 gridE = np.linspace(0,      L,        num=L/dx+1, endpoint=True)
 gridH = np.linspace(dx/2.0, L-dx/2.0, num=L/dx,   endpoint=True)
 
-# ---- Materials --------------------------------------------------------------
-
-# ---- Boundary conditions ----------------------------------------------------
- 
-# ---- Sources ----------------------------------------------------------------
 # Initial field
 spread = 1/math.sqrt(2.0)
-initialE =   gaussianFunction(gridE, L/2, spread)
-initialH = + gaussianFunction(gridH, L/2+dx/2, spread) / imp0
- 
+waveCenter = 5.0
+initialE =   gaussianFunction(gridE, waveCenter, spread)
+initialH = + gaussianFunction(gridH, waveCenter + c0*dt/2, spread) / imp0
+
 # ---- Output requests --------------------------------------------------------
 samplingPeriod = 0.0
  
 # ==== Processing =============================================================
 # ---- Solver initialization --------------------------------------------------
-dt = cfl * dx / c0
+
 numberOfTimeSteps = int( finalTime / dt )
 
 if samplingPeriod == 0.0:
     samplingPeriod = dt 
 nSamples  = int( math.floor(finalTime/samplingPeriod) )
-probeE    = np.zeros((gridE.size, nSamples))
-probeH    = np.zeros((gridH.size, nSamples))
-probeTime = np.zeros(nSamples) 
+probeE            = np.zeros((gridE.size, nSamples))
+probeH            = np.zeros((gridH.size, nSamples))
+probeETheoretical = np.zeros((gridE.size, nSamples))
+probeTime         = np.zeros(nSamples) 
+errorNorm         = np.zeros(nSamples)
 
 eOld = np.zeros(gridE.size)
 eNew = np.zeros(gridE.size)
 hOld = np.zeros(gridH.size)
 hNew = np.zeros(gridH.size)
 if 'initialE' in locals():
-    eOld = initialE
-    hOld = initialH
+    eOld[:] = initialE[:]
+if 'initialH' in locals():
+    hOld[:] = initialH[:]
 
 # Determines recursion coefficients
 cE = dt / eps0 / dx
@@ -91,30 +80,34 @@ for n in range(numberOfTimeSteps):
     # --- Updates E field ---
     # for i in range(1, gridE.size-1):
     #    eNew[i] = eOld[i] + cE * (hOld[i-1] - hOld[i])
-    eNew[1:-1]=eOld[1:-1]+ cE * (hOld[:-1]-hOld[1:])
+    eNew[1:-1] = eOld[1:-1] + cE * (hOld[:-1]-hOld[1:])
 
     # # PMC
     # eNew[ 0] = eOld[0] - 2*cE*hOld[0] 
     # eNew[-1] = eOld[-1] + 2*cE*hOld[-1] 
+    
     #PEC
-    eNew[0]=0.0
-    eNew[-1]=0.0
+    eNew[ 0] = 0.0
+    eNew[-1] = 0.0
 
     # --- Updates H field ---
     # for i in range(gridH.size):
     #    hNew[i] = hOld[i] + cH * (eNew[i] - eNew[i+1])
-    hNew[:]=hOld[:] +cH * (eNew[:-1]-eNew[1:])
+    hNew[:] = hOld[:] + cH * (eNew[:-1]-eNew[1:])
     
     # H field boundary conditions        
     # --- Updates output requests ---
-    probeE[:,n] = eNew[:]
-    probeH[:,n] = hNew[:]
-    probeTime[n] = t
+    probeE[:,n]            = eNew[:]
+    probeH[:,n]            = hNew[:]
+    probeTime[n]           = t
     
     # --- Updates fields and time 
     eOld[:] = eNew[:]
     hOld[:] = hNew[:]
     t += dt
+ 
+    probeETheoretical[:,n] = gaussianFunction(gridE, waveCenter + c0*t, spread)
+    errorNorm[n] = averagedNorm(probeETheoretical[:,n], probeE[:,n])
 
 tictoc = time.time() - tic
 print('--- Processing finished ---')
@@ -135,9 +128,7 @@ timeText1 = ax1.text(0.02, 0.95, '', transform=ax1.transAxes)
 ax2 = fig.add_subplot(2, 2, 2)
 ax2 = plt.axes(xlim=(gridE[0], gridE[-1]), ylim=(-1.1, 1.1))
 ax2.grid(color='gray', linestyle='--', linewidth=.2)
-# ax2.set_xlabel('X coordinate [m]')
-# ax2.set_ylabel('Magnetic field [T]')
-line2,    = ax2.plot([], [], 'o', markersize=1)
+line2,    = ax2.plot([], [], '-', markersize=1)
 timeText2 = ax2.text(0.02, 0.95, '', transform=ax2.transAxes)
 
 def init():
@@ -150,7 +141,7 @@ def init():
 def animate(i):
     line1.set_data(gridE, probeE[:,i])
     timeText1.set_text('Time = %2.1f [ns]' % (probeTime[i]*1e9))
-    line2.set_data(gridH, probeH[:,i]*100)
+    line2.set_data(gridE, probeETheoretical[:,i])
     timeText2.set_text('Time = %2.1f [ns]' % (probeTime[i]*1e9))
     return line1, timeText1, line2, timeText2
 
@@ -160,5 +151,3 @@ anim = animation.FuncAnimation(fig, animate, init_func=init,
 plt.show()
 
 print('=== Program finished ===')
-
-#commit al repositorio local push al git hub y luego pull request al profe 

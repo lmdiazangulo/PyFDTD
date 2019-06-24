@@ -1,8 +1,8 @@
 import numpy as np
+import matplotlib.pyplot as plt
 import math
 import scipy.constants
 import time
-import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
 # ==== Preamble ===============================================================
@@ -16,14 +16,14 @@ def gaussianFunction(t, t0, spread):
 
 def averagedNorm(fAnal, fExp):
     vec = np.power(fAnal[:]-fExp[:],2)
-    return np.sum(vec)/np.size(vec)
+    return np.sqrt(np.sum(vec)/np.size(vec))
  
 # ==== Inputs / Pre-processing ================================================ 
 # ---- Problem definition -----------------------------------------------------
-L         = 50.0
+L         = 250.0
 dx        = 0.1
 finalTime = L/c0*0.8
-cfl       = 0.9
+cfl       = 0.99
 dt = cfl * dx / c0
 
 gridE = np.linspace(0,      L,        num=L/dx+1, endpoint=True)
@@ -113,6 +113,7 @@ tictoc = time.time() - tic
 print('--- Processing finished ---')
 print("CPU Time: %f [s]" % tictoc)
 
+
 # ==== Post-processing ========================================================
 
 # --- Creates animation ---
@@ -122,7 +123,7 @@ ax1 = plt.axes(xlim=(gridE[0], gridE[-1]), ylim=(-1.1, 1.1))
 ax1.grid(color='gray', linestyle='--', linewidth=.2)
 ax1.set_xlabel('X coordinate [m]')
 ax1.set_ylabel('Field')
-line1,    = ax1.plot([], [], 'o', markersize=1)
+line1,    = ax1.plot([], [], '--', markersize=1)
 timeText1 = ax1.text(0.02, 0.95, '', transform=ax1.transAxes)
 
 ax2 = fig.add_subplot(2, 2, 2)

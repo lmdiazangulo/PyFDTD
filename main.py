@@ -68,6 +68,8 @@ tic = time.time()
 t = 0.0
 for n in range(numberOfTimeSteps):
     # --- Updates E field ---
+    # for i in range(1, gridE.size-1):
+    #    eNew[i] = eOld[i] + cE * (hOld[i-1] - hOld[i])
     eNew[1:-1]=eOld[1:-1]+ cE * (hOld[:-1]-hOld[1:])
 
     # PMC
@@ -148,3 +150,4 @@ anim = animation.FuncAnimation(fig, animate, init_func=init,
 plt.show()
 
 print('=== Program finished ===')
+

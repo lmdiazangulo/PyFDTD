@@ -13,41 +13,26 @@ imp0 = math.sqrt(mu0 / eps0)
 
 def gaussianFunction(t, t0, spread):
     return np.exp(- np.power(t-t0, 2) / (2.0 * np.power(spread, 2)) )
-
-# #funcion que calcula el error 
-# #fanal=funcion analítica
-# #fexp=función calculada
-# def funcionerror(fanal,fexp):
-#     vec = np.power(fanal[:]-fexp[:],2)
-#     return np.sum(vec)/np.size(vec)
-
  
-#fig = plt.figure()
-#xdata = vector x
-#ydata = vector con los diferentes errores de mallado
-#plt.xscale("log") #pone escala logaritmica ejex, para cambiarla en el eje y: "plt.yscale("log")"
-#plt.plot(xdata,ydata)
-#plt.show()
-
 # ==== Inputs / Pre-processing ================================================ 
 # ---- Problem definition -----------------------------------------------------
 L         = 10.0
 dx        = 0.1
-finalTime = L/c0*2.5
+finalTime = L/c0*4.0
 cfl       = 0.99 
+
+# Total field parameters.
+tFId  = (10, 80) # Total field indices
+peak   = L/c0*0.5
+spread = L/c0*0.1
 
 gridE = np.linspace(0,      L,        num=L/dx+1, endpoint=True)
 gridH = np.linspace(dx/2.0, L-dx/2.0, num=L/dx,   endpoint=True)
 
-# ---- Materials --------------------------------------------------------------
-
-# ---- Boundary conditions ----------------------------------------------------
- 
-# ---- Sources ----------------------------------------------------------------
 # Initial field
-spread = 1/math.sqrt(2.0)
-initialE =   gaussianFunction(gridE, L/2, spread)
-initialH = + gaussianFunction(gridH, L/2+dx/2, spread) / imp0
+# spread = 1/math.sqrt(2.0)
+# initialE =   gaussianFunction(gridE, L/2, spread)
+# initialH = + gaussianFunction(gridH, L/2+dx/2, spread) / imp0
  
 # ---- Output requests --------------------------------------------------------
 samplingPeriod = 0.0
@@ -80,31 +65,37 @@ cH = dt / mu0  / dx
 print('--- Processing starts---')
 tic = time.time()
 
-w = 2*math.pi * 100e6
-k = c0 / w
-
-eOld[ 0] = 0.0
-eOld[-1] = 0.0
-
 t = 0.0
 for n in range(numberOfTimeSteps):
     # --- Updates E field ---
-    # for i in range(1, gridE.size-1):
-    #    eNew[i] = eOld[i] + cE * (hOld[i-1] - hOld[i])
     eNew[1:-1]=eOld[1:-1]+ cE * (hOld[:-1]-hOld[1:])
 
-    # # PMC
+    # PMC
     # eNew[ 0] = eOld[0] - 2*cE*hOld[0] 
     # eNew[-1] = eOld[-1] + 2*cE*hOld[-1] 
+
     #PEC
-    eNew[0]=0.0
+    # eNew[0]=0.0
     eNew[-1]=0.0
+    
+    # Mur ABC
+    eNew[0] = eOld[1] + (c0*dt - dx)/(c0*dt + dx)*(eNew[1]-eOld[0])
+
+    # Total Field (electric)
+    if 'tFId' in locals():
+        delay = (gridE[tFId[1]] - gridE[tFId[0]]) / c0
+        eNew[tFId[0]] += gaussianFunction(t        , peak, spread)
+        eNew[tFId[1]] -= gaussianFunction(t - delay, peak, spread)
 
     # --- Updates H field ---
-    # for i in range(gridH.size):
-    #    hNew[i] = hOld[i] + cH * (eNew[i] - eNew[i+1])
-    hNew[:]=hOld[:] +cH * (eNew[:-1]-eNew[1:])
+    hNew[:] = hOld[:] + cH * (eNew[:-1]-eNew[1:])
     
+    # Total field (magnetic)
+    if 'tFId' in locals():
+        delay = (gridE[tFId[1]] - gridE[tFId[0]]) / c0
+        hNew[tFId[0]-1] += gaussianFunction(t        , peak, spread) / imp0
+        hNew[tFId[1]-1] -= gaussianFunction(t - delay, peak, spread) / imp0
+
     # H field boundary conditions        
     # --- Updates output requests ---
     probeE[:,n] = eNew[:]
@@ -121,7 +112,6 @@ print('--- Processing finished ---')
 print("CPU Time: %f [s]" % tictoc)
 
 # ==== Post-processing ========================================================
-
 # --- Creates animation ---
 fig = plt.figure(figsize=(8,4))
 ax1 = fig.add_subplot(1, 2, 1)
@@ -135,8 +125,6 @@ timeText1 = ax1.text(0.02, 0.95, '', transform=ax1.transAxes)
 ax2 = fig.add_subplot(2, 2, 2)
 ax2 = plt.axes(xlim=(gridE[0], gridE[-1]), ylim=(-1.1, 1.1))
 ax2.grid(color='gray', linestyle='--', linewidth=.2)
-# ax2.set_xlabel('X coordinate [m]')
-# ax2.set_ylabel('Magnetic field [T]')
 line2,    = ax2.plot([], [], 'o', markersize=1)
 timeText2 = ax2.text(0.02, 0.95, '', transform=ax2.transAxes)
 
@@ -160,5 +148,3 @@ anim = animation.FuncAnimation(fig, animate, init_func=init,
 plt.show()
 
 print('=== Program finished ===')
-
-#commit al repositorio local push al git hub y luego pull request al profe 

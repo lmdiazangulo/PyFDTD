@@ -12,7 +12,7 @@ eps0 = scipy.constants.epsilon_0
 imp0 = math.sqrt(mu0 / eps0)
 
 def gaussianFunction(t, t0, spread):
-    return np.exp(- np.power(t-t0, 2) / (2.0 * np.power(spread, 2)) )
+    return np.sqrt(np.exp(- np.power(t-t0, 2) / (2.0 * np.power(spread, 2))))
  
 # ==== Inputs / Pre-processing ================================================ 
 # ---- Problem definition -----------------------------------------------------

@@ -17,17 +17,24 @@ def gaussianFunction(t, t0, spread):
 # ==== Inputs / Pre-processing ================================================ 
 # ---- Problem definition -----------------------------------------------------
 L         = 10.0
+L1        = 3.0
+L2        = 4.0
 dx        = 0.1
+dx2       = 0.05
 finalTime = L/c0*4.0
 cfl       = 0.99 
 
 # Total field parameters.
-tFId  = (10, 80) # Total field indices
+tFId  = (10, 130) # Total field indices
 peak   = L/c0*0.5
 spread = L/c0*0.1
 
-gridE = np.linspace(0,      L,        num=L/dx+1, endpoint=True)
-gridH = np.linspace(dx/2.0, L-dx/2.0, num=L/dx,   endpoint=True)
+gridE1 = np.linspace(0,      L1,        num=L1/dx,    endpoint=False)
+gridE2 = np.linspace(L1,      L2+L1,    num=L2/dx2,   endpoint=False)
+gridE3 = np.linspace(L1+L2,      L1*2+L2,   num=L1/dx+1,  endpoint=True)
+gridE  = np.hstack([gridE1, gridE2, gridE3])
+
+gridH  = (gridE[:-1]+gridE[1:])/2
 
 # Initial field
 # spread = 1/math.sqrt(2.0)
@@ -39,7 +46,7 @@ samplingPeriod = 0.0
  
 # ==== Processing =============================================================
 # ---- Solver initialization --------------------------------------------------
-dt = cfl * dx / c0
+dt = cfl * dx2 / c0
 numberOfTimeSteps = int( finalTime / dt )
 
 if samplingPeriod == 0.0:
@@ -58,8 +65,8 @@ if 'initialE' in locals():
     hOld = initialH
 
 # Determines recursion coefficients
-cE = dt / eps0 / dx
-cH = dt / mu0  / dx
+cE = dt / eps0 / (gridH[1:]-gridH[:-1])
+cH = dt / mu0  / (gridE[1:]-gridE[:-1])
 
 # ---- Time integration -------------------------------------------------------
 print('--- Processing starts---')

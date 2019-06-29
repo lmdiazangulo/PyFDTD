@@ -1,0 +1,15 @@
+Final assignment on the short course of FDTD. 
+To be presented, explained and shown to work by YOU, on last day.
+Must be uploaded into a fork of your own in github before last day.
+Three workgroups, one assignment per workgroup.
+
+1 .- Incorporate non-homogeneus meshes.
+     Non-homogeneus: meshes where not all cells have the same size.
+
+2 .- Calculate the reflection coefficient (with respect to frequency)
+     of a dielectric slab.
+     - Modify program to incorporate dielectric materials.
+     - Compute FFT of incident wave.
+     - Compute FFT of reflected wave.
+
+3 .- Implement a PML boundary.

@@ -22,7 +22,7 @@ L2        = 4.0
 dx        = 0.1
 dx2       = 0.05
 finalTime = L/c0*4.0
-cfl       = 0.99 
+cfl       = 1.0 
 
 # Total field parameters.
 tFId  = (10, 130) # Total field indices
@@ -93,8 +93,8 @@ for n in range(numberOfTimeSteps):
     # Total Field (electric)
     if 'tFId' in locals():
         delay = (gridE[tFId[1]] - gridE[tFId[0]]) / c0
-        eNew[tFId[0]] += gaussianFunction(t        , peak, spread)
-        eNew[tFId[1]] -= gaussianFunction(t - delay, peak, spread)
+        eNew[tFId[0]] += gaussianFunction(t        , peak, spread)*(dx/c0/dt)
+        eNew[tFId[1]] -= gaussianFunction(t - delay, peak, spread)*(dx/c0/dt)
 
     # --- Updates H field ---
     hNew[:] = hOld[:] + cH * (eNew[:-1]-eNew[1:])
@@ -102,8 +102,8 @@ for n in range(numberOfTimeSteps):
     # Total field (magnetic)
     if 'tFId' in locals():
         delay = (gridE[tFId[1]] - gridE[tFId[0]]) / c0
-        hNew[tFId[0]-1] += gaussianFunction(t        , peak, spread) / imp0
-        hNew[tFId[1]-1] -= gaussianFunction(t - delay, peak, spread) / imp0
+        hNew[tFId[0]-1] += gaussianFunction(t        , peak, spread)*(dx/c0/dt) / imp0
+        hNew[tFId[1]-1] -= gaussianFunction(t - delay, peak, spread)*(dx/c0/dt) / imp0
 
     # H field boundary conditions        
     # --- Updates output requests ---
